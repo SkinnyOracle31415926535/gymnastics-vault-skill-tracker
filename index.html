@@ -336,7 +336,7 @@
     }
 
     .sheet-tools {
-      grid-template-columns: repeat(3, var(--tool-button-width));
+      grid-template-columns: repeat(2, var(--tool-button-width));
       background: rgba(255, 240, 74, 0.18);
     }
 
@@ -413,6 +413,16 @@
       border-color: var(--cyan);
     }
 
+    .sheet-edit-controls .remove-sheet-in-edit {
+      color: var(--white);
+      background: var(--red);
+      border-color: var(--black);
+    }
+
+    #closeSheetEditButton {
+      grid-column: 1 / -1;
+    }
+
     body.settings-locked {
       overflow: hidden;
       background:
@@ -429,7 +439,7 @@
       min-height: 100vh;
       min-height: 100dvh;
       margin: 0;
-      grid-template-rows: auto auto minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
       border: 0;
       box-shadow: none;
       background: transparent;
@@ -470,11 +480,23 @@
       max-height: none;
       min-height: 0;
       padding: 6px;
-      padding-bottom: 78px;
       background:
         linear-gradient(45deg, rgba(255, 75, 216, 0.12) 25%, transparent 25% 50%, rgba(0, 216, 255, 0.14) 50% 75%, transparent 75%),
         rgba(255, 251, 214, 0.9);
       background-size: 18px 18px, auto;
+    }
+
+    body.settings-locked .focus-controls {
+      position: static;
+      right: auto;
+      bottom: auto;
+      z-index: auto;
+      width: min(620px, calc(100% - 12px));
+      grid-template-columns: repeat(3, minmax(120px, 180px));
+      justify-content: center;
+      margin: 0 auto 6px;
+      padding: 6px;
+      transform: none;
     }
 
     body.settings-locked .stats {
@@ -509,7 +531,7 @@
       min-height: 100vh;
       min-height: 100dvh;
       margin: 0;
-      grid-template-rows: auto auto minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
       border: 0;
       box-shadow: none;
       background: transparent;
@@ -550,11 +572,46 @@
       max-height: none;
       min-height: 0;
       padding: 6px;
-      padding-bottom: 118px;
       background:
         linear-gradient(45deg, rgba(255, 75, 216, 0.12) 25%, transparent 25% 50%, rgba(0, 216, 255, 0.14) 50% 75%, transparent 75%),
         rgba(255, 251, 214, 0.9);
       background-size: 18px 18px, auto;
+    }
+
+    body.sheet-edit-mode .sheet-edit-controls {
+      position: static;
+      left: auto;
+      bottom: auto;
+      z-index: auto;
+      width: calc(100% - 12px);
+      grid-template-columns: minmax(180px, 1.45fr) repeat(5, minmax(0, 1fr));
+      align-items: stretch;
+      gap: 6px;
+      padding: 6px;
+      margin: 0 auto 6px;
+      transform: none;
+    }
+
+    body.sheet-edit-mode .sheet-edit-title,
+    body.sheet-edit-mode #closeSheetEditButton {
+      grid-column: auto;
+      min-width: 0;
+    }
+
+    body.sheet-edit-mode .sheet-edit-title {
+      display: grid;
+      place-items: center;
+      padding-inline: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    body.sheet-edit-mode .sheet-edit-controls button {
+      height: 46px;
+      min-height: 46px;
+      padding-inline: 7px;
+      font-size: clamp(11px, 1.25vw, 14px);
     }
 
     body.sheet-edit-mode .stats {
@@ -1009,7 +1066,7 @@
     }
 
     body.sheet-edit-mode td.skill textarea {
-      padding-right: 38px;
+      padding-right: 104px;
     }
 
     .remove-skill-button {
@@ -1040,6 +1097,29 @@
       transform: translate(1px, calc(-50% + 1px));
     }
 
+    .move-skill-button {
+      position: absolute;
+      top: 50%;
+      z-index: 4;
+      width: 26px;
+      min-width: 26px;
+      height: 26px;
+      min-height: 26px;
+      padding: 0;
+      color: var(--black);
+      background: var(--cyan);
+      border: 2px outset var(--white);
+      border-right-color: var(--black);
+      border-bottom-color: var(--black);
+      box-shadow: 2px 2px 0 var(--black);
+      font-size: 16px;
+      line-height: 1;
+      transform: translateY(-50%);
+    }
+
+    .move-skill-up-button { right: 70px; }
+    .move-skill-down-button { right: 38px; }
+
     body.sheet-edit-mode td.progress {
       cursor: crosshair;
       outline: 3px dashed rgba(255, 75, 216, 0.9);
@@ -1051,6 +1131,17 @@
     body.sheet-edit-mode td.progress input {
       pointer-events: none;
       caret-color: transparent;
+    }
+
+    body.sheet-edit-na-mode td.progress {
+      cursor: crosshair;
+      outline-color: var(--red);
+      background-color: #fff5fa;
+    }
+
+    body.sheet-edit-na-mode td.progress:hover {
+      background-color: #ffe0f4;
+      box-shadow: inset 0 0 0 3px var(--red);
     }
 
     body.sheet-edit-mode .rename-panel {
@@ -1221,6 +1312,18 @@
       line-height: 1;
     }
 
+    .add-panel-current-value:focus-visible {
+      outline: 4px solid var(--cyan);
+      outline-offset: 3px;
+    }
+
+    .add-panel.is-setting-total .add-panel-current-value {
+      color: var(--black);
+      background: var(--lime);
+      border-color: var(--black);
+      box-shadow: 3px 3px 0 var(--pink);
+    }
+
     .pin-pad,
     .add-panel-actions,
     .cell-entry-actions,
@@ -1266,7 +1369,7 @@
     }
 
     .add-panel-actions {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr 1fr;
     }
 
     .add-kids-input textarea {
@@ -1525,6 +1628,31 @@
       th.goal-head {
         left: var(--skill-col-width);
       }
+
+      body.settings-locked .focus-controls {
+        width: calc(100% - 12px);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      body.settings-locked .focus-controls button {
+        height: 46px;
+        min-height: 46px;
+        padding-inline: 4px;
+        font-size: 12px;
+      }
+
+      body.sheet-edit-mode .sheet-edit-controls {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      body.sheet-edit-mode .sheet-edit-title {
+        grid-column: 1 / -1;
+      }
+
+      body.sheet-edit-mode #closeSheetEditButton {
+        grid-column: span 2;
+      }
     }
 
     @media print {
@@ -1691,15 +1819,18 @@
     <section id="sheetEditControls" class="sheet-edit-controls" aria-label="Edit Sheet controls" hidden>
       <div id="sheetEditTitle" class="sheet-edit-title">Edit Sheet</div>
       <button id="renameSheetInEditButton" type="button">Name Sheet</button>
-      <button id="closeSheetEditButton" class="done-editing" type="button">Done</button>
+      <button id="sheetEditNaModeButton" type="button" aria-pressed="false">N/A Mode: Off</button>
+      <button id="removeSheetInEditButton" class="remove-sheet-in-edit" type="button">Remove Sheet</button>
+      <button id="applySheetEditButton" class="done-editing" type="button">Apply Changes</button>
+      <button id="closeSheetEditButton" type="button">Close</button>
     </section>
 
     <section id="focusModePanel" class="focus-mode-panel" aria-label="Choose Focus View mode" hidden>
       <div class="focus-mode-panel-title">Focus View Mode</div>
       <div class="focus-mode-message">Choose the progress mode for Focus View.</div>
       <div class="focus-mode-actions">
-        <button type="button" data-focus-mode="quick">Add +1</button>
-        <button type="button" data-focus-mode="custom">Custom Add</button>
+        <button type="button" data-focus-mode="custom">Add Reps</button>
+        <button type="button" data-focus-mode="set">Set Total</button>
         <button type="button" data-focus-mode="type">View Only</button>
         <button id="cancelFocusModeButton" type="button">Cancel</button>
       </div>
@@ -1710,13 +1841,9 @@
         <button id="undoButton" type="button" disabled>Undo</button>
         <button id="redoButton" type="button" disabled>Redo</button>
       </div>
-      <div class="tool-group mode-tools" aria-label="Mode controls">
-        <button id="addModeButton" type="button" aria-pressed="false">Add Mode: Off</button>
-      </div>
       <div class="tool-group sheet-tools" aria-label="Sheet controls">
         <button id="createSheetButton" type="button">Create Sheet</button>
         <button id="editSheetButton" type="button" aria-pressed="false">Edit Sheet</button>
-        <button id="removeSheetButton" type="button">Remove Sheet</button>
       </div>
       <div class="toolbar-end-tools" aria-label="Focus controls">
         <div class="tool-group focus-tools" aria-label="Focus controls">
@@ -1764,12 +1891,12 @@
 
     <section id="addPanel" class="add-panel" aria-label="Add progress" hidden>
       <div id="addPanelTitle" class="add-panel-title">Add reps</div>
-      <div id="addPanelCurrent" class="add-panel-current" aria-live="polite">
+      <div id="addPanelCurrent" class="add-panel-current" aria-live="polite" title="Double-click the current total to set it directly">
         <span class="add-panel-current-label">Current Total</span>
-        <span id="addPanelCurrentValue" class="add-panel-current-value">0</span>
+        <span id="addPanelCurrentValue" class="add-panel-current-value" tabindex="0">0</span>
       </div>
       <label class="custom-add">
-        <span id="customAddLabel">Reps to add · adds automatically</span>
+        <span id="customAddLabel">Reps to add</span>
         <input id="customAddInput" type="text" inputmode="numeric" autocomplete="off" placeholder="reps to add">
       </label>
       <div class="pin-pad" aria-label="Custom amount keypad">
@@ -1787,6 +1914,7 @@
         <button type="button" data-pad-action="backspace">Del</button>
       </div>
       <div class="add-panel-actions">
+        <button id="applyAddButton" type="button">Add Reps</button>
         <button id="closeAddPanelButton" type="button">Close</button>
       </div>
     </section>
@@ -2103,15 +2231,17 @@
     const focusModePanel = document.querySelector("#focusModePanel");
     const focusModeButtons = document.querySelectorAll("[data-focus-mode]");
     const settingsLockButton = document.querySelector("#settingsLockButton");
-    const addModeButton = document.querySelector("#addModeButton");
     const editSheetButton = document.querySelector("#editSheetButton");
     const sheetEditControls = document.querySelector("#sheetEditControls");
     const sheetEditTitle = document.querySelector("#sheetEditTitle");
     const renameSheetInEditButton = document.querySelector("#renameSheetInEditButton");
+    const sheetEditNaModeButton = document.querySelector("#sheetEditNaModeButton");
+    const removeSheetInEditButton = document.querySelector("#removeSheetInEditButton");
     const closeSheetEditButton = document.querySelector("#closeSheetEditButton");
     const addPanel = document.querySelector("#addPanel");
     const addPanelTitle = document.querySelector("#addPanelTitle");
     const addPanelCurrent = document.querySelector("#addPanelCurrent");
+    const addPanelCurrentLabel = document.querySelector(".add-panel-current-label");
     const addPanelCurrentValue = document.querySelector("#addPanelCurrentValue");
     const customAddLabel = document.querySelector("#customAddLabel");
     const customAddInput = document.querySelector("#customAddInput");
@@ -2143,10 +2273,13 @@
     const customAddMode = "custom";
     let addMode = false;
     let sheetEditMode = false;
+    let sheetEditSnapshot = null;
+    let sheetEditNaMode = false;
     let activeEvent = "floor";
     let activeSheet = "sheet-1";
     let activeCustomSheetKeys = [];
     let activeAddTarget = null;
+    let addPanelMode = "add";
     let autoAddTimer = null;
     let selectedEntryRowIndex = null;
     let selectedEntryAthleteIndex = null;
@@ -2223,7 +2356,7 @@
     document.querySelector("#removeClassButton").addEventListener("click", removeActiveClass);
     document.querySelector("#createSheetButton").addEventListener("click", createSheetForActiveEvent);
     editSheetButton.addEventListener("click", () => setSheetEditMode(true));
-    document.querySelector("#removeSheetButton").addEventListener("click", removeActiveSheet);
+    removeSheetInEditButton.addEventListener("click", removeActiveSheet);
     exportAllDaysButton.addEventListener("click", exportAllSavedDaysCsv);
     downloadBackupButton.addEventListener("click", downloadBackup);
     restoreBackupButton.addEventListener("click", requestBackupRestore);
@@ -2240,7 +2373,9 @@
     });
     document.querySelector("#cancelFocusModeButton").addEventListener("click", () => closeFocusModePanel(true));
     renameSheetInEditButton.addEventListener("click", openRenamePanel);
-    closeSheetEditButton.addEventListener("click", () => setSheetEditMode(false));
+    sheetEditNaModeButton.addEventListener("click", toggleSheetEditNaMode);
+    document.querySelector("#applySheetEditButton").addEventListener("click", applySheetEditChanges);
+    closeSheetEditButton.addEventListener("click", discardSheetEditChanges);
     document.querySelector("#saveSheetNameButton").addEventListener("click", renameActiveSheet);
     document.querySelector("#closeRenamePanelButton").addEventListener("click", () => closeRenamePanel(true));
     document.querySelector("#saveAddKidsButton").addEventListener("click", addKidsToActiveClass);
@@ -2289,12 +2424,6 @@
       switchClass(classSelect.value);
     });
     savedDaySelect.addEventListener("change", autoLoadSelectedDay);
-    addModeButton.addEventListener("click", () => {
-      if (blockLockedSettings()) {
-        return;
-      }
-      cycleAddMode();
-    });
     eventButtons.forEach((button) => {
       button.addEventListener("click", () => {
         setActiveEvent(button.dataset.eventFilter);
@@ -2306,7 +2435,6 @@
         customAddInput.value = digits;
       }
       updateAddPanelCurrent();
-      queueProgressAdd();
     });
     document.querySelectorAll("[data-pad-value]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -2341,6 +2469,20 @@
       });
     });
     document.querySelector("#closeAddPanelButton").addEventListener("click", () => closeAddPanel(true));
+    document.querySelector("#applyAddButton").addEventListener("click", applyCustomAdd);
+    addPanelCurrentValue.addEventListener("dblclick", switchAddPanelToSetTotal);
+    addPanelCurrentValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        switchAddPanelToSetTotal();
+      }
+    });
+    customAddInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        applyCustomAdd();
+      }
+    });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         const hadOpenPanel = !addPanel.hidden
@@ -3321,7 +3463,7 @@
 
     function toggleSettingsLock() {
       if (!settingsLocked) {
-        openFocusModePanel();
+        enterFocusView();
         return;
       }
 
@@ -3363,10 +3505,10 @@
       }
     }
 
-    function enterFocusView(mode) {
+    function enterFocusView() {
       setSheetEditMode(false, false);
       resetFocusViewTransientState();
-      focusViewMode = normalizeFocusViewMode(mode);
+      focusViewMode = customAddMode;
       applyFocusViewMode(focusViewMode);
       closeFocusModePanel();
       settingsLocked = true;
@@ -3378,27 +3520,17 @@
     }
 
     function normalizeFocusViewMode(mode) {
-      if (mode === quickAddMode || mode === customAddMode) {
-        return mode;
-      }
-      return "type";
+      return customAddMode;
     }
 
     function focusViewModeLabel(mode) {
-      const normalized = normalizeFocusViewMode(mode);
-      if (normalized === quickAddMode) {
-        return "+1";
-      }
-      if (normalized === customAddMode) {
-        return "custom add";
-      }
-      return "view only";
+      return "add reps";
     }
 
     function applyFocusViewMode(mode, shouldPlay = false) {
       const normalized = normalizeFocusViewMode(mode);
       focusViewMode = normalized;
-      setAddMode(normalized === "type" ? false : normalized, shouldPlay);
+      setAddMode(customAddMode, shouldPlay);
     }
 
     function applySettingsLockState() {
@@ -3443,6 +3575,8 @@
       sheetEditMode = nextMode;
 
       if (sheetEditMode) {
+        sheetEditSnapshot = JSON.stringify(appState);
+        sheetEditNaMode = false;
         setAddMode(false, false);
         clearEntrySelection();
         closeAddPanel();
@@ -3455,6 +3589,10 @@
       }
 
       document.body.classList.toggle("sheet-edit-mode", sheetEditMode);
+      if (!sheetEditMode) {
+        sheetEditNaMode = false;
+      }
+      document.body.classList.toggle("sheet-edit-na-mode", sheetEditMode && sheetEditNaMode);
       editSheetButton.classList.toggle("is-active", sheetEditMode);
       editSheetButton.setAttribute("aria-pressed", String(sheetEditMode));
       updateSheetEditControls();
@@ -3470,11 +3608,49 @@
       }
     }
 
+    function applySheetEditChanges() {
+      if (!sheetEditMode) return;
+      sheetEditSnapshot = null;
+      setSheetEditMode(false);
+      saveState();
+      storageStatus.textContent = "sheet changes applied";
+      playSound("save");
+    }
+
+    function discardSheetEditChanges() {
+      if (!sheetEditMode) return;
+      if (sheetEditSnapshot) {
+        appState = JSON.parse(sheetEditSnapshot);
+        activeClassId = appState.activeClassId;
+        state = getActiveClassRecord().data;
+        activeCustomSheetKeys = getActiveClassRecord().customSheets.slice();
+        sheetEditSnapshot = null;
+        syncClassSelect();
+        saveState(false);
+      }
+      setSheetEditMode(false);
+      storageStatus.textContent = "sheet changes discarded";
+      playSound("close");
+    }
+
     function updateSheetEditControls() {
       sheetEditControls.hidden = !sheetEditMode;
       if (sheetEditMode) {
         sheetEditTitle.textContent = `Edit Sheet · ${getEventLabel(activeEvent)} — ${getSheetLabel(activeEvent, activeSheet)}`;
       }
+      sheetEditNaModeButton.classList.toggle("is-active", sheetEditNaMode);
+      sheetEditNaModeButton.setAttribute("aria-pressed", String(sheetEditNaMode));
+      sheetEditNaModeButton.textContent = sheetEditNaMode ? "N/A Mode: On" : "N/A Mode: Off";
+    }
+
+    function toggleSheetEditNaMode() {
+      if (!sheetEditMode) return;
+      sheetEditNaMode = !sheetEditNaMode;
+      document.body.classList.toggle("sheet-edit-na-mode", sheetEditNaMode);
+      updateSheetEditControls();
+      render();
+      storageStatus.textContent = sheetEditNaMode ? "N/A mode on — click progress cells" : "N/A mode off";
+      playSound(sheetEditNaMode ? "modeOn" : "modeOff");
     }
 
     function lockableSettingElements() {
@@ -3483,10 +3659,9 @@
         classSelect,
         savedDaySelect,
         newClassInput,
-        addModeButton,
         editSheetButton,
         document.querySelector("#createSheetButton"),
-        document.querySelector("#removeSheetButton"),
+        removeSheetInEditButton,
         document.querySelector("#createClassButton"),
         document.querySelector("#addKidsButton"),
         document.querySelector("#removeKidsButton"),
@@ -4443,6 +4618,22 @@
           ? "Settings are locked"
           : sheetEditMode ? "Edit the skill name or use × to remove it" : "Tap a skill, then a name to enter progress";
         if (sheetEditMode) {
+          [
+            { direction: -1, label: "Move skill up", symbol: "↑", className: "move-skill-up-button" },
+            { direction: 1, label: "Move skill down", symbol: "↓", className: "move-skill-down-button" }
+          ].forEach(({ direction, label, symbol, className }) => {
+            const moveButton = document.createElement("button");
+            moveButton.type = "button";
+            moveButton.className = `move-skill-button ${className}`;
+            moveButton.textContent = symbol;
+            moveButton.setAttribute("aria-label", label);
+            moveButton.addEventListener("click", (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              moveSkill(rowIndex, direction);
+            });
+            td.appendChild(moveButton);
+          });
           const removeButton = document.createElement("button");
           removeButton.type = "button";
           removeButton.className = "remove-skill-button";
@@ -4496,6 +4687,24 @@
       );
     }
 
+    function moveSkill(rowIndex, direction) {
+      if (!sheetEditMode || blockLockedSettings()) return;
+      const entries = rowsForActiveSheet();
+      const position = entries.findIndex((entry) => entry.rowIndex === rowIndex);
+      const destination = position + direction;
+      if (position < 0 || destination < 0 || destination >= entries.length) {
+        playSound("error");
+        return;
+      }
+      const otherRowIndex = entries[destination].rowIndex;
+      [state.rows[rowIndex], state.rows[otherRowIndex]] = [state.rows[otherRowIndex], state.rows[rowIndex]];
+      saveState();
+      render();
+      updateStats();
+      storageStatus.textContent = direction < 0 ? "moved skill up" : "moved skill down";
+      playSound("tab");
+    }
+
     function finishRemoveSkill(rowIndex) {
       if (blockLockedSettings()) {
         return;
@@ -4539,7 +4748,7 @@
       input.tabIndex = sheetEditMode ? -1 : 0;
       input.setAttribute("aria-readonly", String(input.readOnly));
       input.setAttribute("aria-label", sheetEditMode
-        ? `${athleteDisplayName(athlete)} ${row.skill}. Click the cell once to toggle n/a.`
+        ? `${athleteDisplayName(athlete)} ${row.skill}. ${sheetEditNaMode ? "N/A mode is on. Click to mark this cell N/A." : "Progress is unchanged while editing the sheet."}`
         : `${athleteDisplayName(athlete)} ${row.skill}`);
       const runSelectedEntryAction = (event) => {
         event.preventDefault();
@@ -4573,11 +4782,15 @@
       };
       const handleProgressPointerUp = (event) => {
         if (sheetEditMode) {
-          if (event.pointerType === "mouse" && event.button !== 0) {
-            return;
+          if (sheetEditNaMode) {
+            event.preventDefault();
+            markSheetEditNaCell(row, athleteIndex, input, td);
           }
+          return;
+        }
+        if (settingsLocked && focusViewMode === customAddMode) {
           event.preventDefault();
-          toggleSheetEditNaCell(row, athleteIndex, input, td);
+          openAddPanel(row, athleteIndex, input, athlete);
           return;
         }
         if (isEntryTarget(rowIndex, athleteIndex)) {
@@ -4629,8 +4842,10 @@
           return;
         }
         if (sheetEditMode) {
-          event.preventDefault();
-          toggleSheetEditNaCell(row, athleteIndex, input, td);
+          if (sheetEditNaMode) {
+            event.preventDefault();
+            markSheetEditNaCell(row, athleteIndex, input, td);
+          }
           return;
         }
         if (!isEntryTarget(rowIndex, athleteIndex)) {
@@ -4660,17 +4875,18 @@
       return td;
     }
 
-    function toggleSheetEditNaCell(row, athleteIndex, input, cell) {
+    function markSheetEditNaCell(row, athleteIndex, input, cell) {
       if (!sheetEditMode || blockLockedSettings()) {
         return;
       }
-      const markingNa = !isNaValue(row.values[athleteIndex]);
+      const clearingNa = isNaValue(row.values[athleteIndex]);
       clearEntrySelection();
-      toggleNaValue(row, athleteIndex, input);
+      row.values[athleteIndex] = clearingNa ? "-" : "n/a";
+      input.value = row.values[athleteIndex];
       updateRowProgress(cell.closest("tr"), row);
       updateStats();
       saveState();
-      storageStatus.textContent = markingNa ? "marked n/a" : "cleared n/a";
+      storageStatus.textContent = clearingNa ? "cleared n/a" : "marked n/a";
       playSound("na");
     }
 
@@ -4696,7 +4912,7 @@
       setAddMode(false);
     }
 
-    function addModeButtonText(mode) {
+    function addModeStatusText(mode) {
       if (mode === quickAddMode) {
         return "Add Mode: +1";
       }
@@ -4713,14 +4929,11 @@
       const isOn = Boolean(addMode);
       document.body.classList.toggle("add-mode", isOn);
       document.body.classList.toggle("custom-add-mode", addMode === customAddMode);
-      addModeButton.classList.toggle("is-active", isOn);
-      addModeButton.setAttribute("aria-pressed", String(isOn));
-      addModeButton.textContent = addModeButtonText(addMode);
       if (addMode !== customAddMode) {
         closeAddPanel();
       }
       if (changed && shouldPlay) {
-        storageStatus.textContent = addModeButtonText(addMode);
+        storageStatus.textContent = addModeStatusText(addMode);
         playSound(isOn ? "modeOn" : "modeOff");
       }
     }
@@ -4767,7 +4980,8 @@
         athlete,
         clearSelectionOnSave
       };
-      addPanelTitle.textContent = `Add reps for ${athleteDisplayName(athlete)}`;
+      addPanelMode = "add";
+      updateAddPanelModeUI();
       customAddInput.value = "";
       updateAddPanelCurrent();
       addPanel.hidden = false;
@@ -4778,6 +4992,8 @@
       const wasOpen = !addPanel.hidden;
       clearQueuedProgressAdd();
       activeAddTarget = null;
+      addPanelMode = "add";
+      addPanel.classList.remove("is-setting-total");
       addPanel.hidden = true;
       customAddInput.value = "";
       if (shouldPlay && wasOpen) {
@@ -4880,15 +5096,17 @@
       const currentTotal = Number.isFinite(currentNumber) ? currentNumber : 0;
       const addAmount = parseNumber(customAddInput.value);
       const hasTypedAmount = cleanName(customAddInput.value) !== "" && Number.isFinite(addAmount);
-      const displayTotal = hasTypedAmount
-        ? currentTotal + addAmount
-        : currentTotal;
+      let displayTotal = currentTotal;
+      if (hasTypedAmount) {
+        displayTotal = addPanelMode === "set" ? addAmount : currentTotal + addAmount;
+      }
       setAddPanelCurrentValue(formatProgressValue(displayTotal));
     }
 
     function setAddPanelCurrentValue(value) {
       addPanelCurrentValue.textContent = value;
-      addPanelCurrent.setAttribute("aria-label", `Current Total ${value}`);
+      const label = addPanelMode === "set" ? "New total" : "Current total";
+      addPanelCurrent.setAttribute("aria-label", `${label} ${value}`);
     }
 
     function clearQueuedProgressAdd() {
@@ -4920,7 +5138,6 @@
       const current = customAddInput.value === "0" ? "" : customAddInput.value;
       customAddInput.value = `${current}${nextDigit}`.slice(0, 5);
       updateAddPanelCurrent();
-      queueProgressAdd();
       playSound("pad");
     }
 
@@ -4935,7 +5152,6 @@
       if (action === "backspace") {
         customAddInput.value = customAddInput.value.slice(0, -1);
         updateAddPanelCurrent();
-        queueProgressAdd();
         playSound("padAction");
       }
     }
@@ -4966,11 +5182,61 @@
       updateRowProgress(input.closest("tr"), row);
       updateStats();
       saveState();
-      customAddInput.value = "";
-      updateAddPanelCurrent();
       const isComplete = progressStateName(row.values[athleteIndex], row.goal) === "complete";
       storageStatus.textContent = `added ${formatProgressValue(amount)}`;
+      closeAddPanel();
       playSound(isComplete && !wasComplete ? "complete" : "add");
+    }
+
+    function applyCustomAdd() {
+      const amount = parseNumber(customAddInput.value);
+      if (!Number.isFinite(amount) || (addPanelMode === "add" && amount <= 0)) {
+        storageStatus.textContent = addPanelMode === "set" ? "enter the new total" : "enter reps to add";
+        playSound("error");
+        return;
+      }
+      if (addPanelMode === "set") {
+        setAddPanelTotal(amount);
+        return;
+      }
+      addProgressAmount(amount);
+    }
+
+    function switchAddPanelToSetTotal() {
+      if (!activeAddTarget || addPanel.hidden) return;
+      addPanelMode = "set";
+      customAddInput.value = "";
+      updateAddPanelModeUI();
+      updateAddPanelCurrent();
+      storageStatus.textContent = "set total mode";
+      playSound("modeOn");
+    }
+
+    function updateAddPanelModeUI() {
+      const athleteName = activeAddTarget ? athleteDisplayName(activeAddTarget.athlete) : "";
+      const settingTotal = addPanelMode === "set";
+      addPanel.classList.toggle("is-setting-total", settingTotal);
+      addPanelTitle.textContent = `${settingTotal ? "Set total" : "Add reps"}${athleteName ? ` for ${athleteName}` : ""}`;
+      addPanelCurrentLabel.textContent = settingTotal ? "New total" : "Current total";
+      customAddLabel.textContent = settingTotal ? "New total" : "Reps to add";
+      customAddInput.placeholder = settingTotal ? "new total" : "reps to add";
+      document.querySelector("#applyAddButton").textContent = settingTotal ? "Set Total" : "Add Reps";
+      addPanelCurrent.title = settingTotal ? "Enter the new total below" : "Double-click the current total to set it directly";
+    }
+
+    function setAddPanelTotal(total) {
+      if (!activeAddTarget) return;
+      const { row, athleteIndex, input } = activeAddTarget;
+      const wasComplete = progressStateName(row.values[athleteIndex], row.goal) === "complete";
+      row.values[athleteIndex] = formatProgressValue(total);
+      input.value = row.values[athleteIndex];
+      updateRowProgress(input.closest("tr"), row);
+      updateStats();
+      saveState();
+      storageStatus.textContent = `set ${formatProgressValue(total)}`;
+      closeAddPanel();
+      const isComplete = progressStateName(row.values[athleteIndex], row.goal) === "complete";
+      playSound(isComplete && !wasComplete ? "complete" : "save");
     }
 
     function blockFocusNaCell(row, athleteIndex) {

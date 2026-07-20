@@ -2275,6 +2275,7 @@
       cell: null,
       time: 0
     };
+    let lastAddPanelTotalTapAt = 0;
     let pendingPinAction = null;
     let enteredPin = "";
     const soundEnabled = true;
@@ -2451,6 +2452,17 @@
     document.querySelector("#closeAddPanelButton").addEventListener("click", () => closeAddPanel(true));
     document.querySelector("#applyAddButton").addEventListener("click", applyCustomAdd);
     addPanelCurrentValue.addEventListener("dblclick", switchAddPanelToSetTotal);
+    addPanelCurrentValue.addEventListener("pointerup", (event) => {
+      if (event.pointerType !== "touch") return;
+
+      const now = Date.now();
+      const isDoubleTap = now - lastAddPanelTotalTapAt <= progressDoubleTapMs;
+      lastAddPanelTotalTapAt = isDoubleTap ? 0 : now;
+      if (!isDoubleTap) return;
+
+      event.preventDefault();
+      switchAddPanelToSetTotal();
+    });
     addPanelCurrentValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
@@ -4966,6 +4978,7 @@
       clearQueuedProgressAdd();
       activeAddTarget = null;
       addPanelMode = "add";
+      lastAddPanelTotalTapAt = 0;
       addPanel.classList.remove("is-setting-total");
       addPanel.hidden = true;
       customAddInput.value = "";

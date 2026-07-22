@@ -242,7 +242,7 @@
     }
 
     .class-tools {
-      grid-template-columns: minmax(220px, 1fr) repeat(4, auto);
+      grid-template-columns: minmax(220px, 1fr) repeat(5, auto);
     }
 
     .bottom-tools {
@@ -1846,6 +1846,7 @@
       </label>
       <button id="createClassButton" type="button">Create Class</button>
       <button id="addKidsButton" type="button">Add Kids</button>
+      <button id="hideKidsButton" type="button">Hide Kids</button>
       <button id="removeKidsButton" type="button">Remove Kids</button>
       <button id="removeClassButton" type="button">Remove Class</button>
     </section>
@@ -2010,6 +2011,7 @@
       { name: "Advanced", athletes: advancedAthletes }
     ];
     let athletes = defaultAthletes.slice();
+    let hiddenAthletes = [];
     const eventOptions = [
       { id: "floor", label: "Floor" },
       { id: "mushroom", label: "Mushroom" },
@@ -2239,6 +2241,8 @@
     const addKidsNamesInput = document.querySelector("#addKidsNamesInput");
     const removeKidsPanel = document.querySelector("#removeKidsPanel");
     const removeKidsPanelTitle = document.querySelector("#removeKidsPanelTitle");
+    const hideKidsButton = document.querySelector("#hideKidsButton");
+    const confirmRemoveKidsButton = document.querySelector("#confirmRemoveKidsButton");
     const kidList = document.querySelector("#kidList");
     const confirmPanel = document.querySelector("#confirmPanel");
     const confirmPanelTitle = document.querySelector("#confirmPanelTitle");
@@ -2267,6 +2271,7 @@
     let selectedEntryAthleteIndex = null;
     let activeCellEntryTarget = null;
     let pendingConfirmAction = null;
+    let kidListMode = "remove";
     const progressDoubleTapMs = 450;
     const progressConfirmTimeoutMs = 4000;
     let pendingProgressConfirm = null;
@@ -2333,6 +2338,7 @@
 
     document.querySelector("#createClassButton").addEventListener("click", createClassFromInput);
     document.querySelector("#addKidsButton").addEventListener("click", addKidsToActiveClass);
+    hideKidsButton.addEventListener("click", openHideKidsPanel);
     document.querySelector("#removeKidsButton").addEventListener("click", openRemoveKidsPanel);
     document.querySelector("#removeClassButton").addEventListener("click", removeActiveClass);
     document.querySelector("#createSheetButton").addEventListener("click", createSheetForActiveEvent);
@@ -2361,7 +2367,13 @@
     document.querySelector("#closeRenamePanelButton").addEventListener("click", () => closeRenamePanel(true));
     document.querySelector("#saveAddKidsButton").addEventListener("click", addKidsToActiveClass);
     document.querySelector("#closeAddKidsPanelButton").addEventListener("click", () => closeAddKidsPanel(true));
-    document.querySelector("#confirmRemoveKidsButton").addEventListener("click", removeSelectedKids);
+    confirmRemoveKidsButton.addEventListener("click", () => {
+      if (kidListMode === "hide") {
+        saveKidVisibility();
+        return;
+      }
+      removeSelectedKids();
+    });
     document.querySelector("#closeRemoveKidsPanelButton").addEventListener("click", () => closeRemoveKidsPanel(true));
     confirmActionButton.addEventListener("click", runPendingConfirmAction);
     document.querySelector("#cancelConfirmButton").addEventListener("click", () => closeConfirmPanel(true));
@@ -2602,7 +2614,12 @@
     function visibleAthleteEntries() {
       return athletes
         .map((athlete, index) => ({ athlete, index }))
-        .filter(({ index }) => !isFocusAthleteAutoHidden(index));
+        .filter(({ index }) => !isAthleteManuallyHidden(index) && !isFocusAthleteAutoHidden(index));
+    }
+
+    function isAthleteManuallyHidden(athleteIndex) {
+      const athlete = athletes[athleteIndex];
+      return Boolean(athlete) && hiddenAthletes.some((name) => name.toLowerCase() === athlete.toLowerCase());
     }
 
     function isFocusAthleteAutoHidden(athleteIndex) {
@@ -2781,6 +2798,7 @@
           default: {
             name: "NGA",
             athletes: defaultAthletes.slice(),
+            hiddenAthletes: [],
             removedSheets: [],
             customSheets: [],
             sheetLabels: {},
@@ -2815,6 +2833,7 @@
           const id = rawId || makeClassId(name, classes);
           const rosterSource = Array.isArray(record.athletes) ? record.athletes : source.athletes;
           const roster = normalizeRosterForClass(rosterSource, name);
+          const hidden = normalizeHiddenAthletes(record.hiddenAthletes || source.hiddenAthletes, roster);
           const removedRows = normalizeRemovedRows(record.removedRows || source.removedRows || []);
           const removedSheets = normalizeRemovedSheets(record.removedSheets || source.removedSheets || []);
           const sheetLabels = normalizeSheetLabels(record.sheetLabels || source.sheetLabels || {});
@@ -2822,6 +2841,7 @@
           classes[id] = {
             name,
             athletes: roster,
+            hiddenAthletes: hidden,
             removedRows,
             removedSheets,
             customSheets,
@@ -2837,6 +2857,7 @@
         classes.default = {
           name: "NGA",
           athletes: defaultAthletes.slice(),
+          hiddenAthletes: [],
           removedRows,
           removedSheets,
           customSheets,
@@ -2849,6 +2870,7 @@
         classes.default = {
           name: "NGA",
           athletes: defaultAthletes.slice(),
+          hiddenAthletes: [],
           removedRows: [],
           removedSheets: [],
           customSheets: [],
@@ -2866,6 +2888,7 @@
         classes[classId] = {
           name: builtInClass.name,
           athletes: roster,
+          hiddenAthletes: [],
           removedRows: [],
           removedSheets: [],
           customSheets: [],
@@ -3012,6 +3035,7 @@
         appState.classes[activeClassId] = {
           name: "NGA",
           athletes: defaultAthletes.slice(),
+          hiddenAthletes: [],
           removedRows: [],
           removedSheets: [],
           customSheets: [],
@@ -3020,6 +3044,10 @@
         };
       }
       appState.classes[activeClassId].athletes = normalizeAthletes(appState.classes[activeClassId].athletes, []);
+      appState.classes[activeClassId].hiddenAthletes = normalizeHiddenAthletes(
+        appState.classes[activeClassId].hiddenAthletes,
+        appState.classes[activeClassId].athletes
+      );
       appState.classes[activeClassId].removedRows = normalizeRemovedRows(appState.classes[activeClassId].removedRows || []);
       appState.classes[activeClassId].removedSheets = normalizeRemovedSheets(appState.classes[activeClassId].removedSheets || []);
       appState.classes[activeClassId].sheetLabels = normalizeSheetLabels(appState.classes[activeClassId].sheetLabels || {});
@@ -3056,6 +3084,7 @@
     function syncControlsFromState() {
       const record = getActiveClassRecord();
       athletes = record.athletes.slice();
+      hiddenAthletes = record.hiddenAthletes.slice();
       state = record.data;
       state.date = normalizeDateValue(state.date || currentIsoDate());
       dateInput.value = formatDisplayDate(state.date);
@@ -3090,6 +3119,7 @@
       appState.classes[classId] = {
         name,
         athletes: roster,
+        hiddenAthletes: [],
         removedRows: [],
         removedSheets: [],
         customSheets: [],
@@ -3261,8 +3291,32 @@
       closeConfirmPanel();
       closePinLockPanel();
       closeSheetStatsPanel();
+      kidListMode = "remove";
       removeKidsPanelTitle.textContent = `Remove kids from ${record.name}`;
-      renderKidList(record.athletes);
+      removeKidsPanel.setAttribute("aria-label", `Remove kids from ${record.name}`);
+      confirmRemoveKidsButton.textContent = "Remove Selected";
+      renderKidList(record.athletes, record.hiddenAthletes);
+      removeKidsPanel.hidden = false;
+      playSound("open");
+    }
+
+    function openHideKidsPanel() {
+      if (blockLockedSettings()) {
+        return;
+      }
+      const record = getActiveClassRecord();
+      closeAddPanel();
+      closeCellEntryPanel();
+      closeRenamePanel();
+      closeAddKidsPanel();
+      closeConfirmPanel();
+      closePinLockPanel();
+      closeSheetStatsPanel();
+      kidListMode = "hide";
+      removeKidsPanelTitle.textContent = `Hide kids from ${record.name}`;
+      removeKidsPanel.setAttribute("aria-label", `Hide kids from ${record.name}`);
+      confirmRemoveKidsButton.textContent = "Save Visibility";
+      renderKidList(record.athletes, record.hiddenAthletes);
       removeKidsPanel.hidden = false;
       playSound("open");
     }
@@ -3271,6 +3325,9 @@
       const wasOpen = !removeKidsPanel.hidden;
       removeKidsPanel.hidden = true;
       kidList.innerHTML = "";
+      kidListMode = "remove";
+      confirmRemoveKidsButton.textContent = "Remove Selected";
+      removeKidsPanel.setAttribute("aria-label", "Remove kids from class");
       if (shouldPlay && wasOpen) {
         playSound("close");
       }
@@ -3393,7 +3450,7 @@
       }
     }
 
-    function renderKidList(roster) {
+    function renderKidList(roster, hiddenNames = []) {
       kidList.innerHTML = "";
       roster.forEach((athlete, index) => {
         const label = document.createElement("label");
@@ -3401,7 +3458,13 @@
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.value = String(index);
-        checkbox.dataset.removeKidIndex = String(index);
+        if (kidListMode === "hide") {
+          checkbox.dataset.hideKidIndex = String(index);
+          checkbox.checked = hiddenNames.some((name) => name.toLowerCase() === athlete.toLowerCase());
+          checkbox.setAttribute("aria-label", `Hide ${athleteDisplayName(athlete)}`);
+        } else {
+          checkbox.dataset.removeKidIndex = String(index);
+        }
         const name = document.createElement("span");
         name.textContent = athleteDisplayName(athlete);
         label.appendChild(checkbox);
@@ -3439,7 +3502,10 @@
         });
       });
 
+      record.hiddenAthletes = normalizeHiddenAthletes(record.hiddenAthletes, record.athletes);
+
       athletes = record.athletes.slice();
+      hiddenAthletes = record.hiddenAthletes.slice();
       state = record.data;
       activeAddTarget = null;
       clearEntrySelection();
@@ -3451,6 +3517,30 @@
       closeRemoveKidsPanel();
       storageStatus.textContent = `removed ${removedNames.map(athleteDisplayName).join(", ")}`;
       playSound("remove");
+    }
+
+    function saveKidVisibility() {
+      if (blockLockedSettings()) {
+        return;
+      }
+      const record = getActiveClassRecord();
+      const selectedIndexes = [...kidList.querySelectorAll("[data-hide-kid-index]:checked")]
+        .map((input) => Number(input.value))
+        .filter(Number.isInteger);
+      record.hiddenAthletes = selectedIndexes.map((index) => record.athletes[index]).filter(Boolean);
+      hiddenAthletes = record.hiddenAthletes.slice();
+      activeAddTarget = null;
+      clearEntrySelection();
+      renderTableShell();
+      render();
+      updateStats();
+      updateSheetStatsPage();
+      saveState();
+      closeRemoveKidsPanel();
+      storageStatus.textContent = selectedIndexes.length
+        ? `hid ${selectedIndexes.length} kid${selectedIndexes.length === 1 ? "" : "s"}`
+        : "showing all kids";
+      playSound("save");
     }
 
     function toggleSettingsLock() {
@@ -3656,6 +3746,7 @@
         removeSheetInEditButton,
         document.querySelector("#createClassButton"),
         document.querySelector("#addKidsButton"),
+        hideKidsButton,
         document.querySelector("#removeKidsButton"),
         document.querySelector("#removeClassButton"),
         exportAllDaysButton,
@@ -6143,6 +6234,11 @@
         }
       });
       return names.length ? names : fallback.slice();
+    }
+
+    function normalizeHiddenAthletes(value, roster = athletes) {
+      const names = normalizeAthletes(value, []);
+      return names.filter((name) => roster.some((athlete) => athlete.toLowerCase() === name.toLowerCase()));
     }
 
     function normalizeRosterForClass(value, className) {

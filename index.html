@@ -14,7 +14,7 @@
     :root {
       --black: #050005;
       --white: #ffffff;
-      --paper: #fffbd6;
+      --paper: #ddf4dc;
       --lime: #8cff00;
       --green: #4dbb23;
       --yellow: #fff04a;
@@ -25,6 +25,7 @@
       --cell: #fffef2;
       --grid: #111111;
       --shadow: #6a006a;
+      --bottom-tools-clearance: 82px;
       --skill-col-base-width: 246px;
       --goal-col-base-width: 58px;
       --athlete-col-base-width: 74px;
@@ -71,8 +72,8 @@
       font-family: var(--font-fun);
       background:
         radial-gradient(circle at 8px 8px, rgba(255, 255, 255, 0.8) 0 2px, transparent 3px),
-        radial-gradient(circle at 28px 28px, rgba(255, 75, 216, 0.75) 0 2px, transparent 3px),
-        linear-gradient(135deg, #24006b 0%, #05003a 45%, #000000 100%);
+        radial-gradient(circle at 28px 28px, rgba(77, 187, 35, 0.42) 0 2px, transparent 3px),
+        linear-gradient(135deg, #dff6da 0%, #b7e6bd 48%, #8fcfa5 100%);
       background-size: 36px 36px, 36px 36px, auto;
       -webkit-text-size-adjust: 100%;
     }
@@ -159,6 +160,7 @@
       margin: 8px auto;
       display: grid;
       grid-template-rows: auto;
+      padding-bottom: var(--bottom-tools-clearance);
       background: var(--paper);
       border: 6px ridge var(--cyan);
       box-shadow: 0 0 0 4px var(--pink), 12px 12px 0 rgba(0, 0, 0, 0.75);
@@ -246,8 +248,16 @@
     }
 
     .bottom-tools {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      z-index: 20;
+      width: min(1600px, calc(100% - 16px));
+      transform: translateX(-50%);
       grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      border-top: 4px double var(--black);
+      border: 6px ridge var(--cyan);
+      border-bottom: 0;
+      box-shadow: 0 -4px 0 var(--pink), 12px 0 0 rgba(0, 0, 0, 0.75);
     }
 
     .edit-tools {
@@ -1497,6 +1507,7 @@
         --skill-col-base-width: 178px;
         --goal-col-base-width: 50px;
         --athlete-col-base-width: 62px;
+        --bottom-tools-clearance: 138px;
       }
 
       .page {
@@ -1506,6 +1517,24 @@
         margin: 0;
         border-width: 4px;
         box-shadow: none;
+      }
+
+      .bottom-tools {
+        left: 0;
+        right: 0;
+        width: 100vw;
+        transform: none;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 8px;
+        border-left-width: 4px;
+        border-right-width: 4px;
+      }
+
+      .bottom-tools button {
+        min-width: 0;
+        padding-inline: 6px;
+        font-size: 14px;
       }
 
       .topbar {

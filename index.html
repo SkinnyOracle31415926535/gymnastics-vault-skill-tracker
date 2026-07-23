@@ -2,7 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+  <script>
+    (() => {
+      const stopZoom = (event) => event.preventDefault();
+      document.addEventListener('gesturestart', stopZoom, { passive: false });
+      document.addEventListener('gesturechange', stopZoom, { passive: false });
+      document.addEventListener('gestureend', stopZoom, { passive: false });
+      document.addEventListener('dblclick', stopZoom, { passive: false });
+      document.addEventListener('touchmove', (event) => {
+        if (event.touches.length > 1) event.preventDefault();
+      }, { passive: false });
+      document.addEventListener('wheel', (event) => {
+        if (event.ctrlKey || event.metaKey) event.preventDefault();
+      }, { passive: false });
+      document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && ['+', '-', '=', '0'].includes(event.key)) event.preventDefault();
+      });
+    })();
+  </script>
   <title>Skill Tracker</title>
   <meta name="application-name" content="Skill Tracker">
   <meta name="apple-mobile-web-app-title" content="Skill Tracker">
@@ -2318,6 +2336,7 @@
     let audioContext = null;
     let audioUnlocked = false;
     let lastAnySoundAt = 0;
+    let lastTouchEndAt = 0;
     const lastSoundTimes = {};
     let appStateLoadFailed = false;
     let savedDaysLoadFailed = false;
@@ -2365,6 +2384,7 @@
     scheduleCalendarRollover();
     document.addEventListener("pointerdown", unlockAudio, { capture: true, passive: true });
     document.addEventListener("touchstart", unlockAudio, { capture: true, passive: true });
+    document.addEventListener("touchend", preventBrowserDoubleTapZoom, { passive: false });
     document.addEventListener("click", playButtonFallbackSound);
 
     document.querySelector("#createClassButton").addEventListener("click", createClassFromInput);
@@ -4525,6 +4545,14 @@
       playSound("click");
     }
 
+
+    function preventBrowserDoubleTapZoom(event) {
+      const now = Date.now();
+      if (now - lastTouchEndAt <= 350 && event.cancelable) {
+        event.preventDefault();
+      }
+      lastTouchEndAt = now;
+    }
 
     function closestButton(target) {
       let node = target;

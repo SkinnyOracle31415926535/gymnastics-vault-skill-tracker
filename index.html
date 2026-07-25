@@ -348,7 +348,7 @@
     }
 
     .sheet-tools {
-      grid-template-columns: repeat(2, var(--tool-button-width));
+      grid-template-columns: repeat(3, var(--tool-button-width));
       background: rgba(255, 240, 74, 0.18);
     }
 
@@ -1462,6 +1462,10 @@
       accent-color: var(--pink);
     }
 
+    .skill-option {
+      overflow-wrap: anywhere;
+    }
+
     tbody tr:nth-child(even) td:not(.event):not(.skill):not(.goal) {
       background-color: #f5fff1;
     }
@@ -1868,6 +1872,7 @@
       <div class="tool-group sheet-tools" aria-label="Sheet controls">
         <button id="createSheetButton" type="button">Create Sheet</button>
         <button id="editSheetButton" type="button" aria-pressed="false">Edit Sheet</button>
+        <button id="hideSkillsButton" type="button">Hide Skills</button>
       </div>
       <div class="toolbar-end-tools" aria-label="Focus controls">
         <div class="tool-group focus-tools" aria-label="Focus controls">
@@ -2284,6 +2289,7 @@
     const removeKidsPanel = document.querySelector("#removeKidsPanel");
     const removeKidsPanelTitle = document.querySelector("#removeKidsPanelTitle");
     const hideKidsButton = document.querySelector("#hideKidsButton");
+    const hideSkillsButton = document.querySelector("#hideSkillsButton");
     const confirmRemoveKidsButton = document.querySelector("#confirmRemoveKidsButton");
     const kidList = document.querySelector("#kidList");
     const confirmPanel = document.querySelector("#confirmPanel");
@@ -2383,6 +2389,7 @@
     document.querySelector("#createClassButton").addEventListener("click", createClassFromInput);
     document.querySelector("#addKidsButton").addEventListener("click", addKidsToActiveClass);
     hideKidsButton.addEventListener("click", openHideKidsPanel);
+    hideSkillsButton.addEventListener("click", openHideSkillsPanel);
     document.querySelector("#removeKidsButton").addEventListener("click", openRemoveKidsPanel);
     document.querySelector("#removeClassButton").addEventListener("click", removeActiveClass);
     document.querySelector("#createSheetButton").addEventListener("click", createSheetForActiveEvent);
@@ -2412,6 +2419,10 @@
     document.querySelector("#saveAddKidsButton").addEventListener("click", addKidsToActiveClass);
     document.querySelector("#closeAddKidsPanelButton").addEventListener("click", () => closeAddKidsPanel(true));
     confirmRemoveKidsButton.addEventListener("click", () => {
+      if (kidListMode === "hide-skills") {
+        saveSkillVisibility();
+        return;
+      }
       if (kidListMode === "hide") {
         saveKidVisibility();
         return;
@@ -2681,7 +2692,7 @@
     }
 
     function athleteColumnIsFullyNa(athleteIndex) {
-      const rows = rowsForActiveSheet();
+      const rows = rowsForActiveSheet().filter(({ row }) => !isSkillManuallyHidden(row));
       return rows.length > 0 && rows.every(({ row }) => isNaValue(row.values?.[athleteIndex]));
     }
 
@@ -2843,6 +2854,7 @@
             name: "NGA",
             athletes: defaultAthletes.slice(),
             hiddenAthletes: [],
+            hiddenSkillKeys: [],
             removedSheets: [],
             customSheets: [],
             sheetLabels: {},
@@ -2878,6 +2890,7 @@
           const rosterSource = Array.isArray(record.athletes) ? record.athletes : source.athletes;
           const roster = normalizeRosterForClass(rosterSource, name);
           const hidden = normalizeHiddenAthletes(record.hiddenAthletes || source.hiddenAthletes, roster);
+          const hiddenSkillKeys = normalizeHiddenSkillKeys(record.hiddenSkillKeys || source.hiddenSkillKeys);
           const removedRows = normalizeRemovedRows(record.removedRows || source.removedRows || []);
           const removedSheets = normalizeRemovedSheets(record.removedSheets || source.removedSheets || []);
           const sheetLabels = normalizeSheetLabels(record.sheetLabels || source.sheetLabels || {});
@@ -2886,6 +2899,7 @@
             name,
             athletes: roster,
             hiddenAthletes: hidden,
+            hiddenSkillKeys,
             removedRows,
             removedSheets,
             customSheets,
@@ -2902,6 +2916,7 @@
           name: "NGA",
           athletes: defaultAthletes.slice(),
           hiddenAthletes: [],
+          hiddenSkillKeys: normalizeHiddenSkillKeys(source.hiddenSkillKeys),
           removedRows,
           removedSheets,
           customSheets,
@@ -2915,6 +2930,7 @@
           name: "NGA",
           athletes: defaultAthletes.slice(),
           hiddenAthletes: [],
+          hiddenSkillKeys: [],
           removedRows: [],
           removedSheets: [],
           customSheets: [],
@@ -2933,6 +2949,7 @@
           name: builtInClass.name,
           athletes: roster,
           hiddenAthletes: [],
+          hiddenSkillKeys: [],
           removedRows: [],
           removedSheets: [],
           customSheets: [],
@@ -3038,6 +3055,11 @@
       return [...new Set(rows.map(cleanName).filter(Boolean))];
     }
 
+    function normalizeHiddenSkillKeys(value) {
+      const keys = Array.isArray(value) ? value : [];
+      return [...new Set(keys.map((key) => cleanName(key).toLowerCase()).filter(Boolean))];
+    }
+
     function normalizeRemovedSheets(value) {
       const sheets = Array.isArray(value) ? value : [];
       return [...new Set(sheets.map(cleanName).filter(Boolean))];
@@ -3080,6 +3102,7 @@
           name: "NGA",
           athletes: defaultAthletes.slice(),
           hiddenAthletes: [],
+          hiddenSkillKeys: [],
           removedRows: [],
           removedSheets: [],
           customSheets: [],
@@ -3091,6 +3114,9 @@
       appState.classes[activeClassId].hiddenAthletes = normalizeHiddenAthletes(
         appState.classes[activeClassId].hiddenAthletes,
         appState.classes[activeClassId].athletes
+      );
+      appState.classes[activeClassId].hiddenSkillKeys = normalizeHiddenSkillKeys(
+        appState.classes[activeClassId].hiddenSkillKeys
       );
       appState.classes[activeClassId].removedRows = normalizeRemovedRows(appState.classes[activeClassId].removedRows || []);
       appState.classes[activeClassId].removedSheets = normalizeRemovedSheets(appState.classes[activeClassId].removedSheets || []);
@@ -3164,6 +3190,7 @@
         name,
         athletes: roster,
         hiddenAthletes: [],
+        hiddenSkillKeys: [],
         removedRows: [],
         removedSheets: [],
         customSheets: [],
@@ -3339,6 +3366,7 @@
       removeKidsPanelTitle.textContent = `Remove kids from ${record.name}`;
       removeKidsPanel.setAttribute("aria-label", `Remove kids from ${record.name}`);
       confirmRemoveKidsButton.textContent = "Remove Selected";
+      confirmRemoveKidsButton.disabled = false;
       renderKidList(record.athletes, record.hiddenAthletes);
       removeKidsPanel.hidden = false;
       playSound("open");
@@ -3360,7 +3388,31 @@
       removeKidsPanelTitle.textContent = `Hide kids from ${record.name}`;
       removeKidsPanel.setAttribute("aria-label", `Hide kids from ${record.name}`);
       confirmRemoveKidsButton.textContent = "Save Visibility";
+      confirmRemoveKidsButton.disabled = false;
       renderKidList(record.athletes, record.hiddenAthletes);
+      removeKidsPanel.hidden = false;
+      playSound("open");
+    }
+
+    function openHideSkillsPanel() {
+      if (blockLockedSettings()) {
+        return;
+      }
+      const record = getActiveClassRecord();
+      const entries = rowsForActiveSheet();
+      closeAddPanel();
+      closeCellEntryPanel();
+      closeRenamePanel();
+      closeAddKidsPanel();
+      closeConfirmPanel();
+      closePinLockPanel();
+      closeSheetStatsPanel();
+      kidListMode = "hide-skills";
+      removeKidsPanelTitle.textContent = `Hide skills from ${getEventLabel(activeEvent)} / ${getSheetLabel(activeEvent, activeSheet)}`;
+      removeKidsPanel.setAttribute("aria-label", `Hide skills from ${getEventLabel(activeEvent)} / ${getSheetLabel(activeEvent, activeSheet)}`);
+      confirmRemoveKidsButton.textContent = "Save Visibility";
+      confirmRemoveKidsButton.disabled = entries.length === 0;
+      renderSkillList(entries, record.hiddenSkillKeys);
       removeKidsPanel.hidden = false;
       playSound("open");
     }
@@ -3371,6 +3423,7 @@
       kidList.innerHTML = "";
       kidListMode = "remove";
       confirmRemoveKidsButton.textContent = "Remove Selected";
+      confirmRemoveKidsButton.disabled = false;
       removeKidsPanel.setAttribute("aria-label", "Remove kids from class");
       if (shouldPlay && wasOpen) {
         playSound("close");
@@ -3517,6 +3570,33 @@
       });
     }
 
+    function renderSkillList(entries, hiddenSkillKeys = []) {
+      kidList.innerHTML = "";
+      if (!entries.length) {
+        kidList.textContent = "No skills on this sheet yet.";
+        return;
+      }
+
+      const hiddenKeys = new Set(normalizeHiddenSkillKeys(hiddenSkillKeys));
+      entries.forEach(({ row }) => {
+        const key = rowKey(row).toLowerCase();
+        const label = document.createElement("label");
+        label.className = "kid-option skill-option";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = key;
+        checkbox.dataset.hideSkillKey = key;
+        checkbox.checked = hiddenKeys.has(key);
+        const skillName = cleanName(row.skill) || "New skill";
+        checkbox.setAttribute("aria-label", `Hide ${skillName}`);
+        const name = document.createElement("span");
+        name.textContent = `${skillName} · Goal ${cleanName(row.goal) || "-"}`;
+        label.appendChild(checkbox);
+        label.appendChild(name);
+        kidList.appendChild(label);
+      });
+    }
+
     function removeSelectedKids() {
       if (blockLockedSettings()) {
         return;
@@ -3584,6 +3664,31 @@
       storageStatus.textContent = selectedIndexes.length
         ? `hid ${selectedIndexes.length} kid${selectedIndexes.length === 1 ? "" : "s"}`
         : "showing all kids";
+      playSound("save");
+    }
+
+    function saveSkillVisibility() {
+      if (blockLockedSettings()) {
+        return;
+      }
+      const record = getActiveClassRecord();
+      const activeSkillKeys = new Set(rowsForActiveSheet().map(({ row }) => rowKey(row).toLowerCase()));
+      const selectedSkillKeys = [...kidList.querySelectorAll("[data-hide-skill-key]:checked")]
+        .map((input) => input.value)
+        .map((key) => cleanName(key).toLowerCase())
+        .filter(Boolean);
+      const hiddenKeysOutsideActiveSheet = (record.hiddenSkillKeys || []).filter((key) => !activeSkillKeys.has(key));
+      record.hiddenSkillKeys = normalizeHiddenSkillKeys([...hiddenKeysOutsideActiveSheet, ...selectedSkillKeys]);
+      activeAddTarget = null;
+      clearEntrySelection();
+      render();
+      updateStats();
+      updateSheetStatsPage();
+      saveState();
+      closeRemoveKidsPanel();
+      storageStatus.textContent = selectedSkillKeys.length
+        ? `hid ${selectedSkillKeys.length} skill${selectedSkillKeys.length === 1 ? "" : "s"}`
+        : "showing all skills";
       playSound("save");
     }
 
@@ -3787,6 +3892,7 @@
         newClassInput,
         editSheetButton,
         document.querySelector("#createSheetButton"),
+        hideSkillsButton,
         removeSheetInEditButton,
         document.querySelector("#createClassButton"),
         document.querySelector("#addKidsButton"),
@@ -4119,7 +4225,17 @@
 
     function visibleRows() {
       return rowsForActiveSheet()
+        .filter((entry) => !isSkillManuallyHidden(entry.row) && !(settingsLocked && rowIsFullyNa(entry.row)));
+    }
+
+    function exportRows() {
+      return rowsForActiveSheet()
         .filter((entry) => !(settingsLocked && rowIsFullyNa(entry.row)));
+    }
+
+    function isSkillManuallyHidden(row) {
+      const hiddenSkillKeys = appState.classes[activeClassId]?.hiddenSkillKeys;
+      return Array.isArray(hiddenSkillKeys) && hiddenSkillKeys.includes(rowKey(row).toLowerCase());
     }
 
     function resolveActiveSheet(event, preferredSheet) {
@@ -6238,7 +6354,7 @@
       const eventName = getEventLabel(activeEvent);
       const sheetName = getSheetLabel(activeEvent, activeSheet);
       const header = ["Date", "Class", "Event", "Sheet", "Skill", "Goal", ...athletes];
-      const rows = [header, ...visibleRows().map(({ row }) => [
+      const rows = [header, ...exportRows().map(({ row }) => [
         state.date,
         className,
         eventName,

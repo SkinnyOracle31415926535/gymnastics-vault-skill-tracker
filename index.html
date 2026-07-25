@@ -281,7 +281,7 @@
     }
 
     .edit-tools {
-      --tool-button-width: 82px;
+      --tool-button-width: 104px;
       --focus-tool-button-width: 104px;
       display: flex;
       flex-wrap: wrap;
@@ -1890,7 +1890,7 @@
       </label>
       <button id="createClassButton" type="button">Create Class</button>
       <button id="addKidsButton" type="button">Add Kids</button>
-      <button id="hideKidsButton" type="button">Hide Kids</button>
+      <button id="hideKidsButton" type="button">Hide Students</button>
       <button id="removeKidsButton" type="button">Remove Kids</button>
       <button id="removeClassButton" type="button">Remove Class</button>
     </section>
@@ -3382,8 +3382,8 @@
       closePinLockPanel();
       closeSheetStatsPanel();
       kidListMode = "hide";
-      removeKidsPanelTitle.textContent = `Hide kids from ${record.name}`;
-      removeKidsPanel.setAttribute("aria-label", `Hide kids from ${record.name}`);
+      removeKidsPanelTitle.textContent = `Hide students from ${record.name}`;
+      removeKidsPanel.setAttribute("aria-label", `Hide students from ${record.name}`);
       confirmRemoveKidsButton.textContent = "Save Visibility";
       confirmRemoveKidsButton.disabled = false;
       renderKidList(record.athletes, record.hiddenAthletes);
@@ -3587,7 +3587,7 @@
         const skillName = cleanName(row.skill) || "New skill";
         checkbox.setAttribute("aria-label", `Hide ${skillName}`);
         const name = document.createElement("span");
-        name.textContent = `${skillName} · Goal ${cleanName(row.goal) || "-"}`;
+        name.textContent = skillName;
         label.appendChild(checkbox);
         label.appendChild(name);
         kidList.appendChild(label);
@@ -3659,8 +3659,8 @@
       saveState();
       closeRemoveKidsPanel();
       storageStatus.textContent = selectedIndexes.length
-        ? `hid ${selectedIndexes.length} kid${selectedIndexes.length === 1 ? "" : "s"}`
-        : "showing all kids";
+        ? `hid ${selectedIndexes.length} student${selectedIndexes.length === 1 ? "" : "s"}`
+        : "showing all students";
       playSound("save");
     }
 
@@ -3935,6 +3935,9 @@
       closeRenamePanel();
       closeAddKidsPanel();
       closeRemoveKidsPanel();
+      if (rollover) {
+        renderTableShell();
+      }
       render();
       updateStats();
       populateSavedDays();
@@ -4535,12 +4538,21 @@
       }
 
       const previousRows = cloneRows(state.rows);
+      const record = getActiveClassRecord();
+      const previousHiddenAthletes = record.hiddenAthletes.slice();
+      const previousHiddenSkillKeys = record.hiddenSkillKeys.slice();
       const clearedCells = clearProgressForNewDay();
       state.date = today;
+      record.hiddenAthletes = [];
+      record.hiddenSkillKeys = [];
+      hiddenAthletes = [];
       dateInput.value = formatDisplayDate(today);
       if (!saveState(false)) {
         state.date = previousDate;
         state.rows = previousRows;
+        record.hiddenAthletes = previousHiddenAthletes;
+        record.hiddenSkillKeys = previousHiddenSkillKeys;
+        hiddenAthletes = previousHiddenAthletes.slice();
         dateInput.value = formatDisplayDate(previousDate);
         lastHistorySnapshot = snapshotCurrentState();
         return false;
@@ -4591,6 +4603,7 @@
       const rollover = rollOverToCurrentDayIfNeeded();
       if (rollover) {
         clearEntrySelection();
+        renderTableShell();
         render();
         updateStats();
         populateSavedDays();
@@ -5660,6 +5673,13 @@
           const roster = normalizeRosterForClass(rosterSource, className);
           const sheetLabels = normalizeSheetLabels(savedDay.sheetLabels || classRecord.sheetLabels || {});
           const customSheets = normalizeCustomSheets(savedDay.customSheets || classRecord.customSheets || [], sheetLabels);
+          const hiddenAthletes = normalizeHiddenAthletes(
+            source.hiddenAthletes ?? savedDay.hiddenAthletes ?? [],
+            roster
+          );
+          const hiddenSkillKeys = normalizeHiddenSkillKeys(
+            source.hiddenSkillKeys ?? savedDay.hiddenSkillKeys ?? []
+          );
           return {
             classId,
             className,
@@ -5668,7 +5688,9 @@
             savedDay,
             roster,
             customSheets,
-            sheetLabels
+            sheetLabels,
+            hiddenAthletes,
+            hiddenSkillKeys
           };
         });
       }).sort((a, b) => (
@@ -5689,13 +5711,16 @@
       return getSheetLabelFromSources(sheetLabels, customSheets, event, sheet);
     }
 
-    function calculateSheetProgress(rows, roster) {
+    function calculateSheetProgress(rows, roster, hiddenAthletes = []) {
       let complete = 0;
       let started = 0;
       let total = 0;
       let skills = 0;
       let teamProgress = 0;
       let teamGoal = 0;
+      const hiddenAthleteNames = new Set(
+        normalizeHiddenAthletes(hiddenAthletes, roster).map((name) => name.toLowerCase())
+      );
 
       rows.forEach((row) => {
         if (!isScoredRow(row)) {
@@ -5704,6 +5729,9 @@
         skills += 1;
         const goal = parseNumber(row.goal);
         for (let index = 0; index < roster.length; index += 1) {
+          if (hiddenAthleteNames.has(roster[index].toLowerCase())) {
+            continue;
+          }
           const value = row.values[index] || "-";
           const normalized = String(value || "").trim().toLowerCase();
           if (isNaValue(value)) {
@@ -5778,15 +5806,18 @@
       }
 
       const dayStats = entries.map((entry) => {
+        const hiddenSkillKeys = new Set(entry.hiddenSkillKeys);
         const rows = savedDayRows(entry).filter((row) => (
-          normalizeEvent(row.event) === activeEvent && normalizeSheet(row.sheet, activeEvent, entry.customSheets) === activeSheet
+          normalizeEvent(row.event) === activeEvent &&
+          normalizeSheet(row.sheet, activeEvent, entry.customSheets) === activeSheet &&
+          !hiddenSkillKeys.has(rowKey(row, entry.customSheets).toLowerCase())
         ));
         return {
           entry,
           rows,
-          ...calculateSheetProgress(rows, entry.roster)
+          ...calculateSheetProgress(rows, entry.roster, entry.hiddenAthletes)
         };
-      }).filter((day) => day.rows.length > 0);
+      }).filter((day) => day.total > 0);
 
       if (!dayStats.length) {
         sheetStatsSummary.textContent = `${entries.length} saved day${entries.length === 1 ? "" : "s"}`;
@@ -5879,6 +5910,8 @@
         label: `${formatDisplayDate(snapshotDate)} - ${className}`,
         savedAt: new Date().toISOString(),
         athletes: athletes.slice(),
+        hiddenAthletes: normalizeHiddenAthletes(record.hiddenAthletes, athletes),
+        hiddenSkillKeys: normalizeHiddenSkillKeys(record.hiddenSkillKeys),
         customSheets: record.customSheets.slice(),
         sheetLabels: { ...record.sheetLabels },
         rows: cloneRows(state.rows)
@@ -5943,6 +5976,13 @@
       const record = getActiveClassRecord();
       record.sheetLabels = normalizeSheetLabels({ ...record.sheetLabels, ...(savedDay.sheetLabels || {}) });
       record.customSheets = normalizeCustomSheets([...(record.customSheets || []), ...(savedDay.customSheets || [])], record.sheetLabels);
+      record.hiddenAthletes = normalizeHiddenAthletes(
+        source.hiddenAthletes ?? savedDay.hiddenAthletes ?? [],
+        record.athletes
+      );
+      record.hiddenSkillKeys = normalizeHiddenSkillKeys(
+        source.hiddenSkillKeys ?? savedDay.hiddenSkillKeys ?? []
+      );
       activeCustomSheetKeys = record.customSheets.slice();
       replaceActiveClassData(normalizeClassData({
         date: source.date || savedDay.date || selectedDate,

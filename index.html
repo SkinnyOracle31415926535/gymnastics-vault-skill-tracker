@@ -264,7 +264,7 @@
     }
 
     .class-tools {
-      grid-template-columns: minmax(220px, 1fr) repeat(5, auto);
+      grid-template-columns: minmax(220px, 1fr) repeat(4, auto);
     }
 
     .bottom-tools {
@@ -348,7 +348,7 @@
     }
 
     .sheet-tools {
-      grid-template-columns: repeat(3, var(--tool-button-width));
+      grid-template-columns: repeat(4, 124px);
       background: rgba(255, 240, 74, 0.18);
     }
 
@@ -1522,6 +1522,10 @@
         padding-inline: 5px;
         font-size: 13px;
       }
+
+      .edit-tools .sheet-tools {
+        grid-template-columns: repeat(4, 90px);
+      }
     }
 
     @media (max-width: 880px) {
@@ -1870,6 +1874,7 @@
         <button id="createSheetButton" type="button">Create Sheet</button>
         <button id="editSheetButton" type="button" aria-pressed="false">Edit Sheet</button>
         <button id="hideSkillsButton" type="button">Hide Skills</button>
+        <button id="hideKidsButton" type="button">Hide Students</button>
       </div>
       <div class="toolbar-end-tools" aria-label="Focus controls">
         <div class="tool-group focus-tools" aria-label="Focus controls">
@@ -1890,7 +1895,6 @@
       </label>
       <button id="createClassButton" type="button">Create Class</button>
       <button id="addKidsButton" type="button">Add Kids</button>
-      <button id="hideKidsButton" type="button">Hide Students</button>
       <button id="removeKidsButton" type="button">Remove Kids</button>
       <button id="removeClassButton" type="button">Remove Class</button>
     </section>

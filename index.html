@@ -26,6 +26,7 @@
   <meta name="apple-mobile-web-app-title" content="Skill Tracker">
   <link rel="icon" type="image/png" href="icon-pastel-green.png">
   <link rel="apple-touch-icon" sizes="180x180" href="icon-pastel-green.png">
+  <link rel="stylesheet" href="skill-tracker-sync.css?v=1">
   <style>
     * {
       box-sizing: border-box;
@@ -2045,6 +2046,7 @@
   </main>
 
 
+  <script src="skill-tracker-store.js?v=1"></script>
   <script>
     const appTitle = "Skill Tracker";
     document.title = appTitle;
@@ -2088,6 +2090,7 @@
     const legacyMushroomStorageKey = "mushroom-circle-tracker-v4";
     const dayStorageKey = "event-skill-tracker-days-v1";
     const legacyDayStorageKey = "rings-floor-form-tracker-days-v1";
+    const skillTrackerStore = window.SkillTrackerStore;
     const backupFormat = "gymnastics-skill-tracker-backup";
     const backupVersion = 1;
     const clearEventPin = "4159";
@@ -2340,6 +2343,9 @@
     const lastSoundTimes = {};
     let appStateLoadFailed = false;
     let savedDaysLoadFailed = false;
+    let pendingExternalStorageRefresh = false;
+    let externalStorageRefreshTimer = null;
+    const externalStorageRefreshKeys = new Set();
     let archiveDayView = false;
     let calendarRolloverTimer = null;
     let appState = loadAppState();
@@ -2355,14 +2361,11 @@
 
     syncClassSelect();
     syncControlsFromState();
-    const initialRollover = rollOverToCurrentDayIfNeeded();
+    const initialRolloverPromise = rollOverToCurrentDayIfNeeded();
     setActiveEvent("floor", false);
     renderTableShell();
     render();
     updateStats();
-    if (initialRollover === null) {
-      saveDay(false, state.date);
-    }
     populateSavedDays();
     updateSheetStatsPage();
     resetHistoryBaseline();
@@ -2370,9 +2373,20 @@
       applyFocusViewMode(focusViewMode, false);
     }
     applySettingsLockState(false);
-    if (initialRollover) {
-      announceAutomaticRollover(initialRollover);
-    }
+    void initialRolloverPromise.then(async (initialRollover) => {
+      if (initialRollover === null) {
+        await saveDay(false, state.date);
+      } else if (initialRollover) {
+        renderTableShell();
+        render();
+        updateStats();
+        populateSavedDays();
+        updateSheetStatsPage();
+        announceAutomaticRollover(initialRollover);
+      }
+    }).catch(() => {
+      storageStatus.textContent = saveFailureMessage();
+    });
     window.addEventListener("resize", updateTableMinWidth);
     window.addEventListener("focus", checkForAutomaticDayRollover);
     window.addEventListener("pageshow", checkForAutomaticDayRollover);
@@ -3163,7 +3177,7 @@
       renderTableShell();
     }
 
-    function createClassFromInput() {
+    async function createClassFromInput() {
       if (blockLockedSettings()) {
         return;
       }
@@ -3180,7 +3194,7 @@
       ));
 
       if (existingId) {
-        switchClass(existingId);
+        await switchClass(existingId);
         storageStatus.textContent = `using ${name}`;
         return;
       }
@@ -3199,7 +3213,7 @@
         data: createFreshState(readDateInput(), roster)
       };
       newClassInput.value = "";
-      switchClass(classId, false);
+      await switchClass(classId, false);
       storageStatus.textContent = `created ${name}`;
       playSound("class");
     }
@@ -3294,7 +3308,7 @@
       );
     }
 
-    function finishRemoveActiveClass(classId, className) {
+    async function finishRemoveActiveClass(classId, className) {
       if (blockLockedSettings()) {
         return;
       }
@@ -3305,6 +3319,11 @@
       }
       if (Object.keys(appState.classes).length <= 1) {
         storageStatus.textContent = "keep at least one class";
+        playSound("error");
+        return;
+      }
+      if (pendingExternalStorageRefresh) {
+        storageStatus.textContent = "synchronized data is waiting to be applied";
         playSound("error");
         return;
       }
@@ -3319,12 +3338,22 @@
         }
       }
 
-      delete appState.classes[classId];
-      const allDays = loadSavedDays();
-      if (allDays.classes && allDays.classes[classId]) {
-        delete allDays.classes[classId];
-        saveSavedDays(allDays);
+      try {
+        if (skillTrackerStore) {
+          await skillTrackerStore.removeSavedDaysForClass(classId);
+        } else {
+          const allDays = loadSavedDays();
+          if (allDays.classes && allDays.classes[classId]) {
+            delete allDays.classes[classId];
+            await saveSavedDays(allDays);
+          }
+        }
+      } catch (error) {
+        storageStatus.textContent = saveFailureMessage();
+        playSound("error");
+        return;
       }
+      delete appState.classes[classId];
 
       activeClassId = Object.keys(appState.classes)[0];
       appState.activeClassId = activeClassId;
@@ -3346,7 +3375,7 @@
       updateStats();
       populateSavedDays();
       updateSheetStatsPage();
-      saveState();
+      await saveState();
       storageStatus.textContent = `removed ${className}`;
       playSound("remove");
     }
@@ -3917,7 +3946,7 @@
       return true;
     }
 
-    function switchClass(classId, shouldPlay = true) {
+    async function switchClass(classId, shouldPlay = true) {
       if (!appState.classes[classId]) {
         storageStatus.textContent = "class missing";
         syncClassSelect();
@@ -3933,7 +3962,7 @@
       setActiveEvent("floor", false);
       syncClassSelect();
       syncControlsFromState();
-      const rollover = rollOverToCurrentDayIfNeeded();
+      const rollover = await rollOverToCurrentDayIfNeeded();
       closeAddPanel();
       closeCellEntryPanel();
       closeRenamePanel();
@@ -4531,13 +4560,13 @@
       playSound("remove");
     }
 
-    function rollOverToCurrentDayIfNeeded() {
+    async function rollOverToCurrentDayIfNeeded() {
       const previousDate = normalizeDateValue(state.date || currentIsoDate());
       const today = currentIsoDate();
       if (previousDate >= today) {
         return null;
       }
-      if (!saveDay(false, previousDate)) {
+      if (!await saveDay(false, previousDate)) {
         return false;
       }
 
@@ -4551,7 +4580,7 @@
       record.hiddenSkillKeys = [];
       hiddenAthletes = [];
       dateInput.value = formatDisplayDate(today);
-      if (!saveState(false)) {
+      if (!await saveState(false)) {
         state.date = previousDate;
         state.rows = previousRows;
         record.hiddenAthletes = previousHiddenAthletes;
@@ -4599,12 +4628,12 @@
       storageStatus.textContent = `new day: ${formatDisplayDate(rollover.date)}${rollover.clearedCells ? ` (${rollover.clearedCells} cell${rollover.clearedCells === 1 ? "" : "s"} cleared)` : ""}`;
     }
 
-    function checkForAutomaticDayRollover() {
+    async function checkForAutomaticDayRollover() {
       if (archiveDayView) {
         scheduleCalendarRollover();
         return null;
       }
-      const rollover = rollOverToCurrentDayIfNeeded();
+      const rollover = await rollOverToCurrentDayIfNeeded();
       if (rollover) {
         clearEntrySelection();
         renderTableShell();
@@ -5642,7 +5671,14 @@
       return { classes: {} };
     }
 
-    function writeJsonToLocalStorage(key, value) {
+    async function writeJsonToLocalStorage(key, value) {
+      if (pendingExternalStorageRefresh) {
+        throw new Error("Synchronized data is waiting to be applied");
+      }
+      if (skillTrackerStore && (key === storageKey || key === dayStorageKey)) {
+        await skillTrackerStore.writeLocal(key, value, { source: "local" });
+        return;
+      }
       const serialized = JSON.stringify(value);
       localStorage.setItem(key, serialized);
       if (localStorage.getItem(key) !== serialized) {
@@ -5656,8 +5692,8 @@
         : "save failed - data was not verified";
     }
 
-    function saveSavedDays(days) {
-      writeJsonToLocalStorage(dayStorageKey, days);
+    async function saveSavedDays(days) {
+      await writeJsonToLocalStorage(dayStorageKey, days);
     }
 
     function savedDayEntries(classFilter = null) {
@@ -5885,7 +5921,7 @@
       savedDaySelect.disabled = settingsLocked || savedDates.length === 0;
     }
 
-    function autoLoadSelectedDay() {
+    async function autoLoadSelectedDay() {
       if (blockLockedSettings()) {
         savedDaySelect.value = state.date;
         return;
@@ -5895,7 +5931,7 @@
         return;
       }
 
-      if (!saveDay(false)) {
+      if (!await saveDay(false)) {
         savedDaySelect.value = state.date;
         return;
       }
@@ -5903,11 +5939,11 @@
       loadSelectedDay(selectedDate);
     }
 
-    function saveDay(shouldPlay = false, dateOverride = state.date) {
+    function createSavedDaySnapshot(dateOverride = state.date) {
       const snapshotDate = normalizeDateValue(dateOverride || state.date || currentIsoDate());
       const className = activeClassName();
       const record = getActiveClassRecord();
-      const snapshot = {
+      return {
         classId: activeClassId,
         className,
         date: snapshotDate,
@@ -5920,25 +5956,34 @@
         sheetLabels: { ...record.sheetLabels },
         rows: cloneRows(state.rows)
       };
+    }
 
+    async function persistSavedDaySnapshot(snapshot, shouldPlay = false) {
       try {
+        if (pendingExternalStorageRefresh) {
+          throw new Error("Synchronized data is waiting to be applied");
+        }
         if (appStateLoadFailed) {
           throw new Error("Current app data is unreadable");
         }
-        const allDays = loadSavedDays();
-        if (savedDaysLoadFailed) {
-          throw new Error("Saved day data is unreadable");
+        if (skillTrackerStore) {
+          await skillTrackerStore.upsertSavedDay(snapshot);
+        } else {
+          const allDays = loadSavedDays();
+          if (savedDaysLoadFailed) {
+            throw new Error("Saved day data is unreadable");
+          }
+          if (!allDays.classes[snapshot.classId]) {
+            allDays.classes[snapshot.classId] = {};
+          }
+          allDays.classes[snapshot.classId][snapshot.date] = snapshot;
+          await saveSavedDays(allDays);
         }
-        if (!allDays.classes[activeClassId]) {
-          allDays.classes[activeClassId] = {};
-        }
-        allDays.classes[activeClassId][snapshotDate] = snapshot;
-        saveSavedDays(allDays);
         populateSavedDays();
         updateSheetStatsPage();
         savedDaySelect.value = state.date;
         if (shouldPlay) {
-          storageStatus.textContent = `autosaved ${formatDisplayDate(snapshotDate)}`;
+          storageStatus.textContent = `autosaved ${formatDisplayDate(snapshot.date)}`;
           playSound("save");
         }
         return true;
@@ -5949,6 +5994,13 @@
         }
         return false;
       }
+    }
+
+    async function saveDay(shouldPlay = false, dateOverride = state.date) {
+      return persistSavedDaySnapshot(
+        createSavedDaySnapshot(dateOverride),
+        shouldPlay
+      );
     }
 
     function loadSelectedDay(selectedDate = savedDaySelect.value, shouldPlay = true) {
@@ -6150,8 +6202,9 @@
       playSound("load");
     }
 
-    function saveState(recordHistory = true) {
+    async function saveState(recordHistory = true) {
       const snapshot = snapshotCurrentState();
+      const savedDaySnapshot = createSavedDaySnapshot(state.date);
       if (recordHistory && lastHistorySnapshot && snapshot !== lastHistorySnapshot) {
         undoStack.push(lastHistorySnapshot);
         if (undoStack.length > historyLimit) {
@@ -6168,8 +6221,8 @@
         if (appStateLoadFailed) {
           throw new Error("Current app data is unreadable");
         }
-        writeJsonToLocalStorage(storageKey, JSON.parse(snapshot));
-        const daySaved = saveDay(false, state.date);
+        await writeJsonToLocalStorage(storageKey, JSON.parse(snapshot));
+        const daySaved = await persistSavedDaySnapshot(savedDaySnapshot, false);
         if (!daySaved) {
           throw new Error("Saved day data was not written");
         }
@@ -6187,11 +6240,11 @@
       return saved;
     }
 
-    function downloadBackup() {
+    async function downloadBackup() {
       if (blockLockedSettings()) {
         return;
       }
-      if (!saveState(false)) {
+      if (!await saveState(false)) {
         playSound("error");
         return;
       }
@@ -6273,14 +6326,21 @@
       };
     }
 
-    function finishBackupRestore(backup) {
+    async function finishBackupRestore(backup) {
       if (blockLockedSettings()) {
         return;
       }
 
       try {
-        writeJsonToLocalStorage(storageKey, backup.appState);
-        writeJsonToLocalStorage(dayStorageKey, backup.savedDays);
+        if (pendingExternalStorageRefresh) {
+          throw new Error("Synchronized data is waiting to be applied");
+        }
+        if (skillTrackerStore) {
+          await skillTrackerStore.replaceAllLocal(backup.appState, backup.savedDays);
+        } else {
+          await writeJsonToLocalStorage(storageKey, backup.appState);
+          await writeJsonToLocalStorage(dayStorageKey, backup.savedDays);
+        }
         appStateLoadFailed = false;
         savedDaysLoadFailed = false;
         appState = normalizeAppState(backup.appState);
@@ -6304,7 +6364,7 @@
         }
         applySettingsLockState(false);
         lastSaved.textContent = "restored";
-        const rollover = checkForAutomaticDayRollover();
+        const rollover = await checkForAutomaticDayRollover();
         if (rollover === null) {
           storageStatus.textContent = "backup restored and verified";
           playSound("load");
@@ -6493,6 +6553,142 @@
       textarea.style.height = "auto";
       textarea.style.height = `${textarea.scrollHeight}px`;
     }
+
+    function hasActiveTrackerEditor() {
+      const active = document.activeElement;
+      const focusedEditor = Boolean(
+        active &&
+        active !== document.body &&
+        active.matches("input, textarea, select, [contenteditable='true']") &&
+        !active.closest(".skill-sync-dialog")
+      );
+      const openEditorPanel = [
+        addPanel,
+        cellEntryPanel,
+        renamePanel,
+        addKidsPanel,
+        removeKidsPanel,
+        focusModePanel,
+        confirmPanel,
+        pinLockPanel
+      ].some((panel) => panel && !panel.hidden);
+      return focusedEditor || openEditorPanel || sheetEditMode;
+    }
+
+    function whenTrackerEditorIdle() {
+      if (!hasActiveTrackerEditor()) {
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => {
+        const check = () => {
+          if (!hasActiveTrackerEditor()) {
+            resolve();
+            return;
+          }
+          window.setTimeout(check, 25);
+        };
+        check();
+      });
+    }
+
+    function applyExternalStorageRefresh() {
+      if (!pendingExternalStorageRefresh || hasActiveTrackerEditor()) {
+        return false;
+      }
+      if (externalStorageRefreshTimer !== null) {
+        window.clearTimeout(externalStorageRefreshTimer);
+        externalStorageRefreshTimer = null;
+      }
+
+      const refreshWorkspace = externalStorageRefreshKeys.has(storageKey);
+      const refreshDays = externalStorageRefreshKeys.has(dayStorageKey);
+      try {
+        if (refreshWorkspace) {
+          const previousEvent = activeEvent;
+          const previousSheet = activeSheet;
+          appState = loadAppState();
+          if (appStateLoadFailed) {
+            throw new Error("Synchronized workspace could not be read");
+          }
+          activeClassId = appState.activeClassId;
+          settingsLocked = Boolean(appState.settingsLocked);
+          focusViewMode = normalizeFocusViewMode(appState.focusViewMode);
+          archiveDayView = false;
+          resetFocusViewTransientState();
+          clearEntrySelection();
+          closeAddPanel();
+          closeCellEntryPanel();
+          closeRenamePanel();
+          closeAddKidsPanel();
+          closeRemoveKidsPanel();
+          closeConfirmPanel();
+          closePinLockPanel();
+          closeFocusModePanel();
+          syncClassSelect();
+          syncControlsFromState();
+          activeEvent = normalizeEventFilter(previousEvent);
+          activeSheet = resolveActiveSheet(activeEvent, previousSheet);
+          renderSheetTabs();
+          renderTableShell();
+          render();
+          updateStats();
+          resetHistoryBaseline();
+          if (settingsLocked) {
+            applyFocusViewMode(focusViewMode, false);
+          }
+          applySettingsLockState(false);
+          scheduleCalendarRollover();
+        }
+        if (refreshWorkspace || refreshDays) {
+          populateSavedDays();
+          updateSheetStatsPage();
+        }
+        externalStorageRefreshKeys.clear();
+        pendingExternalStorageRefresh = false;
+        lastSaved.textContent = "synced";
+        storageStatus.textContent = "synchronized data applied";
+        return true;
+      } catch (error) {
+        storageStatus.textContent = "synchronized data needs review - local edits blocked";
+        return false;
+      }
+    }
+
+    function queueExternalStorageRefresh(detail) {
+      if (!detail || (detail.key !== storageKey && detail.key !== dayStorageKey)) {
+        return;
+      }
+      externalStorageRefreshKeys.add(detail.key);
+      pendingExternalStorageRefresh = true;
+      if (externalStorageRefreshTimer !== null) {
+        window.clearTimeout(externalStorageRefreshTimer);
+      }
+      externalStorageRefreshTimer = window.setTimeout(() => {
+        externalStorageRefreshTimer = null;
+        applyExternalStorageRefresh();
+      }, 75);
+    }
+
+    if (skillTrackerStore) {
+      window.addEventListener(skillTrackerStore.changeEvent, (event) => {
+        const detail = event.detail;
+        if (!detail || detail.source === "local" || detail.source === "sync-stage") {
+          return;
+        }
+        queueExternalStorageRefresh(detail);
+      });
+      document.addEventListener("focusout", () => {
+        window.setTimeout(applyExternalStorageRefresh, 0);
+      });
+    }
+
+    window.SkillTrackerAppBridge = Object.freeze({
+      hasActiveEditor: hasActiveTrackerEditor,
+      whenEditorIdle: whenTrackerEditorIdle,
+      applyExternalStorageRefresh
+    });
   </script>
+  <script src="https://ryan-app-sync.ryan-666-mp3.chatgpt.site/ryan-app-sync.js"></script>
+  <script src="skill-tracker-sync.js?v=1"></script>
 </body>
 </html>

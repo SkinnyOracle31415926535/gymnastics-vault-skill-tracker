@@ -6649,6 +6649,12 @@
         pendingExternalStorageRefresh = false;
         lastSaved.textContent = "synced";
         storageStatus.textContent = "synchronized data applied";
+        if (refreshWorkspace && !archiveDayView) {
+          // A remote workspace can arrive after startup has already rolled the
+          // local copy forward. Re-check now so yesterday's synchronized data
+          // cannot leave the tracker on the wrong day.
+          void checkForAutomaticDayRollover();
+        }
         return true;
       } catch (error) {
         storageStatus.textContent = "synchronized data needs review - local edits blocked";

@@ -583,26 +583,28 @@
     host.setAttribute("aria-label", "Temporary settings and data transfer");
     host.innerHTML = `
       <style>
-        .app-transfer-tools { position: fixed; z-index: 2147483000; right: 12px; bottom: 12px; width: min(360px, calc(100vw - 24px)); color: #122018; font: 600 13px/1.35 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-align: left; }
-        .app-transfer-tools details { overflow: hidden; border: 2px solid #1f5d38; border-radius: 12px; background: #f5fff8; box-shadow: 0 12px 30px rgba(0,0,0,.28); }
-        .app-transfer-tools summary { cursor: pointer; padding: 10px 12px; color: #fff; background: #1f5d38; font-weight: 800; }
-        .app-transfer-tools [data-transfer-body] { padding: 12px; }
+        .app-transfer-tools { position: fixed; z-index: 2147483000; right: 12px; bottom: 12px; width: min(360px, calc(100vw - 24px)); color: #050005; font: 900 12px/1.35 var(--font-fun, "Comic Sans MS", "Trebuchet MS", Verdana, Arial, sans-serif); text-align: left; }
+        .app-transfer-tools details { overflow: hidden; border: 3px outset #ffffff; border-right-color: #050005; border-bottom-color: #050005; border-radius: 0; background: #ddf4dc; box-shadow: 3px 3px 0 #6a006a; }
+        .app-transfer-tools summary { cursor: pointer; padding: 10px 12px; color: #8cff00; background: #050005; font-family: var(--font-display, "Comic Sans MS", "Trebuchet MS", Verdana, Arial, sans-serif); font-weight: 900; letter-spacing: .02em; text-shadow: 1px 1px 0 #5627ff; text-transform: uppercase; }
+        .app-transfer-tools [data-transfer-body] { padding: 12px; background: #ddf4dc; }
         .app-transfer-tools p { margin: 0 0 10px; }
         .app-transfer-tools [data-transfer-actions] { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .app-transfer-tools button { min-height: 40px; border: 2px solid #17472b; border-radius: 8px; padding: 8px; color: #fff; background: #287849; font: inherit; font-weight: 800; cursor: pointer; }
-        .app-transfer-tools button[data-transfer-import] { color: #17351f; background: #c8f4d4; }
-        .app-transfer-tools button:focus-visible, .app-transfer-tools summary:focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
-        .app-transfer-tools [data-transfer-message] { min-height: 1.35em; color: #274832; font-size: 12px; }
-        .app-transfer-tools [data-transfer-message][data-kind="error"] { color: #a31919; }
-        .app-transfer-tools [data-transfer-message][data-kind="success"] { color: #0d5c2d; }
-        .app-transfer-tools [data-transfer-preview] { margin-top: 10px; padding-top: 10px; border-top: 1px solid #9ac9a7; }
-        .app-transfer-tools [data-transfer-preview] button { width: 100%; margin-top: 8px; background: #0f6b36; }
-        .app-transfer-tools [data-transfer-sync] { margin-top: 10px; padding-top: 10px; border-top: 1px solid #9ac9a7; }
+        .app-transfer-tools button { min-height: 46px; border: 3px outset #ffffff; border-right-color: #050005; border-bottom-color: #050005; border-radius: 0; padding: 7px 12px; color: #050005; background: #fff04a; box-shadow: 3px 3px 0 #6a006a; font-family: var(--font-display, "Comic Sans MS", "Trebuchet MS", Verdana, Arial, sans-serif); font-size: 12px; font-weight: 900; line-height: 1.05; text-transform: uppercase; cursor: pointer; }
+        .app-transfer-tools button:active { border-style: inset; box-shadow: 1px 1px 0 #6a006a; transform: translate(2px, 2px); }
+        .app-transfer-tools button[data-transfer-import] { color: #050005; background: #8cff00; }
+        .app-transfer-tools [data-transfer-private-recovery] { width: 100%; margin-top: 8px; }
+        .app-transfer-tools button:focus-visible, .app-transfer-tools summary:focus-visible { outline: 3px solid #00d8ff; outline-offset: 3px; }
+        .app-transfer-tools [data-transfer-message] { min-height: 1.35em; color: #050005; font-size: 12px; }
+        .app-transfer-tools [data-transfer-message][data-kind="error"] { color: #c00016; }
+        .app-transfer-tools [data-transfer-message][data-kind="success"] { color: #18710c; }
+        .app-transfer-tools [data-transfer-preview] { margin-top: 10px; padding-top: 10px; border-top: 3px dotted #4dbb23; }
+        .app-transfer-tools [data-transfer-preview] button { width: 100%; margin-top: 8px; background: #fff04a; }
+        .app-transfer-tools [data-transfer-sync] { margin-top: 10px; padding-top: 10px; border-top: 3px dotted #4dbb23; }
         .app-transfer-tools [data-transfer-sync] strong { display: block; margin-bottom: 4px; }
-        .app-transfer-tools [data-transfer-sync-now] { width: 100%; margin: 7px 0; background: #1e5f86; }
-        .app-transfer-tools [data-transfer-sync-status][data-kind="conflict"] { color: #9a3a00; }
-        .app-transfer-tools .app-transfer-conflict { display: grid; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #bad1c0; font-size: 12px; }
-        .app-transfer-tools .app-transfer-conflict button { min-height: 32px; padding: 5px; font-size: 12px; background: #704d11; }
+        .app-transfer-tools [data-transfer-sync-now] { width: 100%; margin: 7px 0; background: #00d8ff; }
+        .app-transfer-tools [data-transfer-sync-status][data-kind="conflict"] { color: #c00016; }
+        .app-transfer-tools .app-transfer-conflict { display: grid; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 3px dotted #ff4bd8; font-size: 12px; }
+        .app-transfer-tools .app-transfer-conflict button { min-height: 36px; padding: 5px; font-size: 11px; background: #ff4bd8; }
         @media (max-width: 480px) { .app-transfer-tools { right: 8px; bottom: 8px; width: min(340px, calc(100vw - 16px)); } }
       </style>
       <details>

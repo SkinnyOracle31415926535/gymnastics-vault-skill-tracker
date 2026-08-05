@@ -6735,10 +6735,94 @@
           }
           return null;
         },
+        semanticSync: {
+          collections: ["preferences", "classes", "saved_days"],
+          async listRecords() {
+            const store = window.SkillTrackerStore;
+            if (!store) throw new Error("Skill Tracker sync is not ready.");
+            const state = store.readState();
+            const records = [
+              ...(await store.listClassRecords()).map((item) => ({
+                collection: "classes", recordId: item.recordId, value: item.value
+              })),
+              ...(await store.listDayRecords()).map((item) => ({
+                collection: "saved_days", recordId: item.recordId, value: item.value
+              }))
+            ];
+            if (state) {
+              records.push({
+                collection: "preferences",
+                recordId: "current",
+                value: store.preferencesValue(state)
+              });
+            }
+            return records;
+          },
+          validateRecord(record) {
+            const store = window.SkillTrackerStore;
+            if (!store) return false;
+            if (record.collection === "classes") {
+              return /^class:[a-f0-9]{64}$/.test(record.recordId)
+                && (record.deleted || store.isClassValue(record.value));
+            }
+            if (record.collection === "saved_days") {
+              return /^day:[a-f0-9]{64}$/.test(record.recordId)
+                && (record.deleted || store.isSavedDayValue(record.value));
+            }
+            return !record.deleted
+              && record.collection === "preferences"
+              && record.recordId === "current"
+              && store.isPreferencesValue(record.value);
+          },
+          verifyLocal(record) {
+            const store = window.SkillTrackerStore;
+            if (record.collection === "preferences") {
+              return store.verifyCurrentPreferences(record.value, { deleted: Boolean(record.deleted) });
+            }
+            if (record.collection === "classes") {
+              return store.verifyCurrentClassRecord(
+                record.recordId,
+                record.value,
+                { deleted: Boolean(record.deleted) }
+              );
+            }
+            if (record.collection === "saved_days") {
+              return store.verifyCurrentDayRecord(
+                record.recordId,
+                record.value,
+                { deleted: Boolean(record.deleted) }
+              );
+            }
+            throw new Error("Skill Tracker sync collection is invalid.");
+          },
+          applyRemote(record) {
+            const store = window.SkillTrackerStore;
+            const metadata = { source: "remote", deleted: Boolean(record.deleted) };
+            if (record.collection === "preferences") return store.applyPreferences(record.value, metadata);
+            if (record.collection === "classes") {
+              return store.applyClassRecord(record.recordId, record.value, metadata);
+            }
+            if (record.collection === "saved_days") {
+              return store.applyDayRecord(record.recordId, record.value, metadata);
+            }
+            throw new Error("Skill Tracker sync collection is invalid.");
+          },
+          priority(record) {
+            if (record.deleted) {
+              if (record.collection === "saved_days") return 8;
+              if (record.collection === "classes") return 9;
+              return 10;
+            }
+            if (record.collection === "classes") return 0;
+            if (record.collection === "saved_days") return 1;
+            return 2;
+          }
+        },
         beforeReplace: () => window.SkillTrackerAppBridge?.whenEditorIdle?.()
       };
     })();
   </script>
+  <script src="semantic-sync.js"></script>
   <script src="migration-transfer.js"></script>
 </body>
 </html>

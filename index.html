@@ -257,13 +257,17 @@
     }
 
     .day-tools {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       column-gap: 14px;
       row-gap: 10px;
     }
 
     .day-tools label {
       min-width: 0;
+    }
+
+    .day-tools .start-today-button {
+      background: var(--lime);
     }
 
     .class-tools {
@@ -1790,6 +1794,7 @@
         Saved days
         <select id="savedDaySelect"></select>
       </label>
+      <button id="startTodayButton" class="start-today-button" type="button" title="Save the current sheet and begin today">Start Today</button>
     </section>
 
     <section class="event-tabs" aria-label="Event chooser">
@@ -2243,6 +2248,7 @@
     const classSelect = document.querySelector("#classSelect");
     const newClassInput = document.querySelector("#newClassInput");
     const savedDaySelect = document.querySelector("#savedDaySelect");
+    const startTodayButton = document.querySelector("#startTodayButton");
     const trackerColgroup = document.querySelector("#trackerColgroup");
     const trackerHeaderRow = document.querySelector("#trackerHeaderRow");
     const totalComplete = document.querySelector("#totalComplete");
@@ -2488,6 +2494,7 @@
       }
       switchClass(classSelect.value);
     });
+    startTodayButton.addEventListener("click", () => void startCurrentDayManually());
     savedDaySelect.addEventListener("change", autoLoadSelectedDay);
     eventButtons.forEach((button) => {
       button.addEventListener("click", () => {
@@ -4648,6 +4655,30 @@
       }
       scheduleCalendarRollover();
       return rollover;
+    }
+
+    async function startCurrentDayManually() {
+      if (blockLockedSettings()) {
+        return;
+      }
+      if (archiveDayView) {
+        storageStatus.textContent = "load the current day before starting today";
+        playSound("error");
+        return;
+      }
+      const today = currentIsoDate();
+      const activeDate = normalizeDateValue(state.date || today);
+      if (activeDate >= today) {
+        storageStatus.textContent = activeDate === today
+          ? `already on ${formatDisplayDate(today)}`
+          : `tracker is set to ${formatDisplayDate(activeDate)}`;
+        playSound("load");
+        return;
+      }
+      const rollover = await checkForAutomaticDayRollover();
+      if (rollover === false) {
+        playSound("error");
+      }
     }
 
     function scheduleCalendarRollover() {

@@ -1,0 +1,12 @@
+{
+  "name": "Skill Tracker",
+  "short_name": "Skill Tracker",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ddf4dc",
+  "theme_color": "#4dbb23",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

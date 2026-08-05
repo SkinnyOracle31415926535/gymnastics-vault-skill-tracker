@@ -23,9 +23,12 @@
   </script>
   <title>Skill Tracker</title>
   <meta name="application-name" content="Skill Tracker">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Skill Tracker">
-  <link rel="icon" type="image/png" href="icon-pastel-green.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="icon-pastel-green.png">
+  <meta name="theme-color" content="#4dbb23">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <style>
     * {
       box-sizing: border-box;
@@ -6687,5 +6690,55 @@
       applyExternalStorageRefresh
     });
   </script>
+  <script>
+    window.AppMigrationConfig = (() => {
+      const stateKey = "event-skill-tracker-v1";
+      const daysKey = "event-skill-tracker-days-v1";
+      const keys = [stateKey, daysKey];
+      const fromValue = (key, value) => ({ key, present: true, value });
+      const fromRaw = (key, raw) => raw === null
+        ? { key, present: false }
+        : { key, present: true, rawValue: raw };
+      return {
+        appId: "skill-tracker",
+        ownedKeys: keys,
+        validateRecords(records) {
+          for (const key of keys) {
+            const raw = records.has(key) ? records.get(key) : null;
+            const inspected = window.SkillTrackerStore?.inspectRaw(key, raw);
+            if (!inspected || !["valid", "missing"].includes(inspected.status)) {
+              throw new Error(inspected?.error?.message || "Skill Tracker data does not match the current app format.");
+            }
+          }
+        },
+        summarizeRecords(records) {
+          const raw = records.get(stateKey);
+          if (!raw) return "an empty Skill Tracker workspace";
+          try {
+            const state = JSON.parse(raw);
+            const count = state.classes && typeof state.classes === "object" ? Object.keys(state.classes).length : 0;
+            return `${count} class${count === 1 ? "" : "es"}, saved days, and Skill Tracker settings`;
+          } catch (_error) { return "Skill Tracker settings and data"; }
+        },
+        normalizeLegacyBackup(payload) {
+          if (payload && payload.format === "gymnastics-skill-tracker-backup" && Number(payload.version) === 1) {
+            return {
+              label: "Skill Tracker backup",
+              records: [fromValue(stateKey, payload.appState), fromValue(daysKey, payload.savedDays)]
+            };
+          }
+          if (payload && payload.kind === "skill_tracker_browser_local_raw_backup" && payload.app_id === "skill-tracker" && Array.isArray(payload.records)) {
+            return {
+              label: "Skill Tracker raw browser backup",
+              records: payload.records.map((record) => fromRaw(record.key, record.present ? record.raw_value : null))
+            };
+          }
+          return null;
+        },
+        beforeReplace: () => window.SkillTrackerAppBridge?.whenEditorIdle?.()
+      };
+    })();
+  </script>
+  <script src="migration-transfer.js"></script>
 </body>
 </html>
